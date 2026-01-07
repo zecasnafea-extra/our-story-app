@@ -1,24 +1,51 @@
 import React, { useState } from 'react';
-import { X, Film, Tv, Gamepad2 } from 'lucide-react';
+import { X, Film, Tv, Gamepad2, Star } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 
-const AddItemModal = ({ onClose }) => {
-  const { addDocument } = useFirestore('watchlist');
-  const [type, setType] = useState('movie'); // movie, series, game
+const AddItemModal = ({ onClose, editItem = null }) => {
+  const { addDocument, updateDocument } = useFirestore('watchlist');
+  const [type, setType] = useState(editItem?.type || 'movie');
   const [formData, setFormData] = useState({
-    title: '',
-    status: 'not-started',
+    title: editItem?.title || '',
+    status: editItem?.status || 'not-started',
+    rating: editItem?.rating || 0,
+    categories: editItem?.categories || [],
     // Series specific
-    season: 1,
-    watchedEpisodes: 0,
-    totalEpisodes: 10,
+    season: editItem?.season || 1,
+    watchedEpisodes: editItem?.watchedEpisodes || 0,
+    totalEpisodes: editItem?.totalEpisodes || 10,
     // Game specific
-    hoursPlayed: 0,
-    estimatedHours: 10,
+    hoursPlayed: editItem?.hoursPlayed || 0,
+    estimatedHours: editItem?.estimatedHours || 10,
     // Movie specific
-    notes: '',
+    notes: editItem?.notes || '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  const movieSeriesCategories = [
+    'Action', 'Adventure', 'Comedy', 'Romance', 'Drama', 
+    'Horror', 'Thriller', 'Sci-Fi', 'Fantasy', 'Animation', 'Documentary'
+  ];
+
+  const gameCategories = [
+    'Action', 'Adventure', 'Puzzle', 'Simulation', 
+    'Sports', 'Casual', 'Horror'
+  ];
+
+  const categories = type === 'game' ? gameCategories : movieSeriesCategories;
+
+  const toggleCategory = (category) => {
+    setFormData(prev => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter(c => c !== category)
+        : [...prev.categories, category]
+    }));
+  };
+
+  const setRating = (rating) => {
+    setFormData(prev => ({ ...prev, rating }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,6 +61,8 @@ const AddItemModal = ({ onClose }) => {
         title: formData.title.trim(),
         type,
         status: formData.status,
+        rating: formData.rating,
+        categories: formData.categories,
       };
 
       let specificData = {};
@@ -55,12 +84,17 @@ const AddItemModal = ({ onClose }) => {
         };
       }
 
-      await addDocument({ ...baseData, ...specificData });
-      console.log('✅ Item added successfully!');
+      if (editItem) {
+        await updateDocument(editItem.id, { ...baseData, ...specificData });
+      } else {
+        await addDocument({ ...baseData, ...specificData });
+      }
+      
+      console.log('✅ Item saved successfully!');
       onClose();
     } catch (error) {
-      console.error('❌ Error adding item:', error);
-      alert('Failed to add item. Please try again.');
+      console.error('❌ Error saving item:', error);
+      alert('Failed to save item. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -68,9 +102,11 @@ const AddItemModal = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto animate-scale-in">
+      <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-gray-800">➕ Add New Item</h3>
+          <h3 className="text-2xl font-bold text-gray-800">
+            {editItem ? '✏️ Edit Item' : '➕ Add New Item'}
+          </h3>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -91,11 +127,12 @@ const AddItemModal = ({ onClose }) => {
               <button
                 type="button"
                 onClick={() => setType('movie')}
+                disabled={editItem}
                 className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${
                   type === 'movie'
                     ? 'border-red-500 bg-red-50 text-red-600'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                } ${editItem ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Film size={24} />
                 <span className="text-xs font-medium">Movie</span>
@@ -103,11 +140,12 @@ const AddItemModal = ({ onClose }) => {
               <button
                 type="button"
                 onClick={() => setType('series')}
+                disabled={editItem}
                 className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${
                   type === 'series'
                     ? 'border-blue-500 bg-blue-50 text-blue-600'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                } ${editItem ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Tv size={24} />
                 <span className="text-xs font-medium">Series</span>
@@ -115,11 +153,12 @@ const AddItemModal = ({ onClose }) => {
               <button
                 type="button"
                 onClick={() => setType('game')}
+                disabled={editItem}
                 className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${
                   type === 'game'
                     ? 'border-purple-500 bg-purple-50 text-purple-600'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                } ${editItem ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Gamepad2 size={24} />
                 <span className="text-xs font-medium">Game</span>
@@ -141,6 +180,72 @@ const AddItemModal = ({ onClose }) => {
               disabled={submitting}
               required
             />
+          </div>
+
+          {/* Rating */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Rating (Optional)
+            </label>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  disabled={submitting}
+                  className="transition-transform hover:scale-110"
+                >
+                  <Star
+                    size={32}
+                    className={`${
+                      star <= formData.rating
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300'
+                    } transition-colors`}
+                  />
+                </button>
+              ))}
+              {formData.rating > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRating(0)}
+                  disabled={submitting}
+                  className="ml-2 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Categories */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Categories (Select multiple)
+            </label>
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => toggleCategory(category)}
+                  disabled={submitting}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    formData.categories.includes(category)
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+            {formData.categories.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.categories.length} selected
+              </p>
+            )}
           </div>
 
           {/* Status */}
@@ -267,7 +372,7 @@ const AddItemModal = ({ onClose }) => {
             disabled={submitting || !formData.title.trim()}
             className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Adding...' : `Add ${type.charAt(0).toUpperCase() + type.slice(1)}`}
+            {submitting ? 'Saving...' : editItem ? 'Update Item' : `Add ${type.charAt(0).toUpperCase() + type.slice(1)}`}
           </button>
         </form>
       </div>
