@@ -115,32 +115,25 @@ const AddDateModal = ({ onClose, editItem = null }) => {
           {/* Estimated Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Estimated Price
+              Estimated Price (Optional)
             </label>
-            <div className="flex gap-2">
-              {[0, 1, 2, 3, 4, 5].map((price) => (
-                <button
-                  key={price}
-                  type="button"
-                  onClick={() => setFormData({...formData, estimatedPrice: price})}
-                  disabled={loading}
-                  className={`flex-1 py-2 rounded-lg border-2 transition-all font-medium ${
-                    formData.estimatedPrice === price
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 hover:border-green-300 text-gray-600'
-                  }`}
-                >
-                  {price === 0 ? 'Free' : '$'.repeat(price)}
-                </button>
-              ))}
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                $
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.estimatedPrice || ''}
+                onChange={(e) => setFormData({...formData, estimatedPrice: parseFloat(e.target.value) || 0})}
+                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                placeholder="0.00"
+                disabled={loading}
+              />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {formData.estimatedPrice === 0 && 'Free activity'}
-              {formData.estimatedPrice === 1 && 'Budget-friendly (under $20)'}
-              {formData.estimatedPrice === 2 && 'Moderate ($20-50)'}
-              {formData.estimatedPrice === 3 && 'Nice treat ($50-100)'}
-              {formData.estimatedPrice === 4 && 'Special occasion ($100-200)'}
-              {formData.estimatedPrice === 5 && 'Luxury experience ($200+)'}
+              Enter the estimated cost for this date
             </p>
           </div>
 
