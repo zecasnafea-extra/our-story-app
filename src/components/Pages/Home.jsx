@@ -268,7 +268,9 @@ const Home = ({ setActiveTab }) => {
           </p>
           {otherNoteDoc?.updatedAt && (
             <p className="text-xs text-gray-500 mt-2">
-              Updated {new Date(otherNoteDoc.updatedAt?.toDate?.()).toLocaleDateString()}
+              Updated {otherNoteDoc.updatedAt instanceof Date 
+                ? otherNoteDoc.updatedAt.toLocaleDateString()
+                : otherNoteDoc.updatedAt?.toDate?.()?.toLocaleDateString() || 'recently'}
             </p>
           )}
         </div>
