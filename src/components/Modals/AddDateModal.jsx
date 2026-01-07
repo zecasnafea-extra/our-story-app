@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 
-const AddDateModal = ({ onClose }) => {
-  const { addDocument } = useFirestore('dateIdeas');
+const AddDateModal = ({ onClose, editItem = null }) => {
+  const { addDocument, updateDocument } = useFirestore('dateIdeas');
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    title: '',
-    category: '',
-    notes: ''
+    title: editItem?.title || '',
+    category: editItem?.category || '',
+    notes: editItem?.notes || ''
   });
 
   const handleSubmit = async (e) => {
@@ -17,14 +17,18 @@ const AddDateModal = ({ onClose }) => {
 
     setLoading(true);
     try {
-      await addDocument({
-        ...formData,
-        status: 'planned'
-      });
+      if (editItem) {
+        await updateDocument(editItem.id, formData);
+      } else {
+        await addDocument({
+          ...formData,
+          status: 'planned'
+        });
+      }
       onClose();
     } catch (error) {
-      console.error('Error adding date idea:', error);
-      alert('Failed to add date idea. Please try again.');
+      console.error('Error saving date idea:', error);
+      alert('Failed to save date idea. Please try again.');
     }
     setLoading(false);
   };
@@ -33,10 +37,13 @@ const AddDateModal = ({ onClose }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl p-6 max-w-md w-full animate-scale-in">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-gray-800">📅 Add Date Idea</h3>
+          <h3 className="text-2xl font-bold text-gray-800">
+            {editItem ? '✏️ Edit Date Idea' : '📅 Add Date Idea'}
+          </h3>
           <button 
             onClick={onClose} 
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            disabled={loading}
           >
             <X size={24} />
           </button>
@@ -54,6 +61,7 @@ const AddDateModal = ({ onClose }) => {
               onChange={(e) => setFormData({...formData, title: e.target.value})}
               className="input"
               placeholder="Try that new restaurant..."
+              disabled={loading}
               required
             />
           </div>
@@ -67,6 +75,7 @@ const AddDateModal = ({ onClose }) => {
               value={formData.category}
               onChange={(e) => setFormData({...formData, category: e.target.value})}
               className="input"
+              disabled={loading}
               required
             >
               <option value="">Choose category...</option>
@@ -88,6 +97,7 @@ const AddDateModal = ({ onClose }) => {
               className="input"
               rows="3"
               placeholder="Any details or ideas..."
+              disabled={loading}
             />
           </div>
 
@@ -97,7 +107,7 @@ const AddDateModal = ({ onClose }) => {
             disabled={loading || !formData.title || !formData.category}
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Adding...' : 'Add Date Idea'}
+            {loading ? 'Saving...' : editItem ? 'Update Date Idea' : 'Add Date Idea'}
           </button>
         </div>
       </div>
