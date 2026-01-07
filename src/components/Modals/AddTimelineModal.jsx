@@ -2,15 +2,15 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 
-const AddTimelineModal = ({ onClose }) => {
-  const { addDocument } = useFirestore('timeline');
+const AddTimelineModal = ({ onClose, editItem = null }) => {
+  const { addDocument, updateDocument } = useFirestore('timeline');
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    type: '',
-    title: '',
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    tags: ''
+    type: editItem?.type || '',
+    title: editItem?.title || '',
+    description: editItem?.description || '',
+    date: editItem?.date || new Date().toISOString().split('T')[0],
+    tags: editItem?.tags ? editItem.tags.join(', ') : ''
   });
 
   const handleSubmit = async (e) => {
@@ -19,15 +19,26 @@ const AddTimelineModal = ({ onClose }) => {
 
     setLoading(true);
     try {
-      await addDocument({
-        ...formData,
-        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : [],
-        isCompleted: formData.type === 'date' ? false : true
-      });
+      const dataToSave = {
+        type: formData.type,
+        title: formData.title,
+        description: formData.description,
+        date: formData.date,
+        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()) : []
+      };
+
+      if (editItem) {
+        await updateDocument(editItem.id, dataToSave);
+      } else {
+        await addDocument({
+          ...dataToSave,
+          isCompleted: formData.type === 'date' ? false : true
+        });
+      }
       onClose();
     } catch (error) {
-      console.error('Error adding timeline item:', error);
-      alert('Failed to add item. Please try again.');
+      console.error('Error saving timeline item:', error);
+      alert('Failed to save item. Please try again.');
     }
     setLoading(false);
   };
@@ -36,10 +47,13 @@ const AddTimelineModal = ({ onClose }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-gray-800">✨ Add Memory</h3>
+          <h3 className="text-2xl font-bold text-gray-800">
+            {editItem ? '✏️ Edit Memory' : '✨ Add Memory'}
+          </h3>
           <button 
             onClick={onClose} 
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            disabled={loading}
           >
             <X size={24} />
           </button>
@@ -55,6 +69,7 @@ const AddTimelineModal = ({ onClose }) => {
               value={formData.type}
               onChange={(e) => setFormData({...formData, type: e.target.value})}
               className="input"
+              disabled={loading}
               required
             >
               <option value="">Choose type...</option>
@@ -75,6 +90,7 @@ const AddTimelineModal = ({ onClose }) => {
               onChange={(e) => setFormData({...formData, title: e.target.value})}
               className="input"
               placeholder="What happened?"
+              disabled={loading}
               required
             />
           </div>
@@ -90,6 +106,7 @@ const AddTimelineModal = ({ onClose }) => {
               className="input"
               rows="3"
               placeholder="Tell the story..."
+              disabled={loading}
             />
           </div>
 
@@ -103,6 +120,7 @@ const AddTimelineModal = ({ onClose }) => {
               value={formData.date}
               onChange={(e) => setFormData({...formData, date: e.target.value})}
               className="input"
+              disabled={loading}
               required
             />
           </div>
@@ -118,6 +136,7 @@ const AddTimelineModal = ({ onClose }) => {
               onChange={(e) => setFormData({...formData, tags: e.target.value})}
               className="input"
               placeholder="travel, adventure, special"
+              disabled={loading}
             />
           </div>
 
@@ -127,7 +146,7 @@ const AddTimelineModal = ({ onClose }) => {
             disabled={loading || !formData.type || !formData.title}
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Adding...' : 'Add to Timeline'}
+            {loading ? 'Saving...' : editItem ? 'Update Memory' : 'Add to Timeline'}
           </button>
         </div>
       </div>
