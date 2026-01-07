@@ -81,9 +81,8 @@ const DatePlanner = () => {
   };
 
   const getPriceDisplay = (price) => {
-    if (!price) return null;
-    const dollars = '$'.repeat(Math.min(price, 5));
-    return dollars;
+    if (!price || price === 0) return null;
+    return `${price.toFixed(2)}`;
   };
 
   return (
