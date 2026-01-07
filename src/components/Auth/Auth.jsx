@@ -3,36 +3,32 @@ import { Heart, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { signup, login } = useAuth();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (password.length < 6) {
-      return setError('Password must be at least 6 characters');
-    }
+  e.preventDefault();
 
-    setError('');
-    setLoading(true);
+  if (password.length < 6) {
+    return setError('Password must be at least 6 characters');
+  }
 
-    try {
-      if (isLogin) {
-        await login(email, password);
-      } else {
-        await signup(email, password);
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-    
-    setLoading(false);
+  setError('');
+  setLoading(true);
+
+  try {
+    await login(email, password);
+  } catch (err) {
+    setError('Invalid email or password');
+  }
+
+  setLoading(false);
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -45,7 +41,7 @@ const Auth = () => {
             Our Story
           </h1>
           <p className="text-gray-600 mt-2">
-            {isLogin ? 'Welcome back ❤️' : 'Create your shared space 💕'}
+              Welcome back ❤️
           </p>
         </div>
 
@@ -96,21 +92,9 @@ const Auth = () => {
               disabled={loading}
               className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
+              {loading ? 'Please wait...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError('');
-              }}
-              className="text-pink-600 hover:text-pink-700 font-medium text-sm"
-            >
-              {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-            </button>
-          </div>
         </div>
 
         <p className="text-center text-gray-500 text-sm mt-6">
