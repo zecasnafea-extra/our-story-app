@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Check, X, Trash2 } from 'lucide-react';
+import { Plus, Check, X, Trash2, Edit2 } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 import AddDateModal from '../Modals/AddDateModal';
 
 const DatePlanner = () => {
   const { documents: dateIdeas, updateDocument, deleteDocument } = useFirestore('dateIdeas');
   const [showModal, setShowModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [filter, setFilter] = useState('all');
 
   const updateStatus = async (id, status) => {
@@ -25,6 +26,16 @@ const DatePlanner = () => {
         alert('Failed to delete. Please try again.');
       }
     }
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingItem(null);
   };
 
   const categories = [
@@ -112,6 +123,13 @@ const DatePlanner = () => {
                     {date.status === 'canceled' && (
                       <X size={24} className="text-gray-400 flex-shrink-0" />
                     )}
+                    <button
+                      onClick={() => handleEdit(date)}
+                      className="p-1.5 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Edit"
+                    >
+                      <Edit2 size={16} />
+                    </button>
                   </div>
                 </div>
 
@@ -184,7 +202,12 @@ const DatePlanner = () => {
         )}
       </div>
 
-      {showModal && <AddDateModal onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <AddDateModal 
+          onClose={handleCloseModal} 
+          editItem={editingItem}
+        />
+      )}
     </div>
   );
 };
