@@ -6,7 +6,7 @@ import Home from './components/Pages/Home';
 import Timeline from './components/Pages/Timeline.jsx';
 import WishJar from './components/Pages/WishJar';
 import DatePlanner from './components/Pages/DatePlanner';
-import PhotoAlbum from './components/Pages/PhotoAlbum';
+import WatchPlayList from './components/Pages/WatchPlayList';
 
 const AppContent = () => {
   const { currentUser } = useAuth();
@@ -29,7 +29,7 @@ const AppContent = () => {
         {activeTab === 'timeline' && <Timeline />}
         {activeTab === 'wishes' && <WishJar />}
         {activeTab === 'dates' && <DatePlanner />}
-        {activeTab === 'photos' && <PhotoAlbum />}
+        {activeTab === 'Playlist' && <WatchPlayList />}
       </main>
 
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
