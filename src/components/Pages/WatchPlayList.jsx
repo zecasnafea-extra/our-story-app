@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Plus, Film, Tv, Gamepad2, Clock, Play, CheckCircle2 } from 'lucide-react';
+import { Plus, Film, Tv, Gamepad2, Clock, Play, CheckCircle2, Shuffle } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 import AddItemModal from '../Modals/AddItemModal';
+import RandomizerModal from '../Modals/RandomizerModal';
 import ItemCard from './ItemCard';
 
 const WatchPlayList = () => {
   const { documents: items, loading } = useFirestore('watchlist');
   const [showModal, setShowModal] = useState(false);
+  const [showRandomizer, setShowRandomizer] = useState(false);
   const [filter, setFilter] = useState('all'); // all, movie, series, game
   const [statusFilter, setStatusFilter] = useState('all'); // all, not-started, in-progress, done
 
@@ -77,13 +79,26 @@ const WatchPlayList = () => {
             Track movies, series, and games together ({stats.total} items)
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all"
-          title="Add new item"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex gap-3">
+          {/* Randomizer Button */}
+          <button
+            onClick={() => setShowRandomizer(true)}
+            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center gap-2"
+            title="Pick random item"
+          >
+            <Shuffle size={20} />
+            <span className="font-medium hidden sm:inline">Random</span>
+          </button>
+          
+          {/* Add Button */}
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-gradient-to-r from-purple-500 to-pink-600 text-white p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all"
+            title="Add new item"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -245,6 +260,14 @@ const WatchPlayList = () => {
 
       {/* Add Item Modal */}
       {showModal && <AddItemModal onClose={() => setShowModal(false)} />}
+      
+      {/* Randomizer Modal */}
+      {showRandomizer && (
+        <RandomizerModal 
+          items={items} 
+          onClose={() => setShowRandomizer(false)} 
+        />
+      )}
     </div>
   );
 };
