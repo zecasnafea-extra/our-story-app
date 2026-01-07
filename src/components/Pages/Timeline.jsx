@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Check, Calendar as CalIcon, Heart, Cake, Gift as GiftIcon, Sparkles, Trash2 } from 'lucide-react';
+import { Plus, Check, Calendar as CalIcon, Heart, Cake, Gift as GiftIcon, Sparkles, Trash2, Edit2 } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 import AddTimelineModal from '../Modals/AddTimelineModal';
 import AddDateCounterModal from '../Modals/AddDateCounterModal';
@@ -9,6 +9,7 @@ const Timeline = () => {
   const { documents: dateCounters, deleteDocument: deleteCounterDoc } = useFirestore('dateCounters');
   const [showModal, setShowModal] = useState(false);
   const [showCounterModal, setShowCounterModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [filter, setFilter] = useState('all');
   const [counters, setCounters] = useState([]);
 
@@ -51,6 +52,16 @@ const Timeline = () => {
         alert('Failed to delete. Please try again.');
       }
     }
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingItem(null);
   };
 
   const getTypeConfig = (type) => {
@@ -259,9 +270,18 @@ const Timeline = () => {
                   {/* Title & Status */}
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-bold text-xl text-gray-800">{item.title}</h3>
-                    {item.isCompleted && item.type === 'date' && (
-                      <Check size={24} className="text-green-500 flex-shrink-0" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {item.isCompleted && item.type === 'date' && (
+                        <Check size={24} className="text-green-500 flex-shrink-0" />
+                      )}
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="p-1.5 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Type Badge */}
@@ -319,7 +339,12 @@ const Timeline = () => {
         )}
       </div>
 
-      {showModal && <AddTimelineModal onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <AddTimelineModal 
+          onClose={handleCloseModal} 
+          editItem={editingItem}
+        />
+      )}
       {showCounterModal && <AddDateCounterModal onClose={() => setShowCounterModal(false)} />}
     </div>
   );
