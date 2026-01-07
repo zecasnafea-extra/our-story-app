@@ -7,7 +7,7 @@ const Navigation = ({ activeTab, setActiveTab }) => {
     { id: 'timeline', icon: Sparkles, label: 'Timeline' },
     { id: 'wishes', icon: Gift, label: 'Wishes' },
     { id: 'dates', icon: Calendar, label: 'Dates' },
-    { id: 'photos', icon: Image, label: 'Photos' },
+    { id: 'watch-play', icon: Tv, label: 'Watch' },
   ];
 
   return (
