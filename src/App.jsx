@@ -29,7 +29,7 @@ const AppContent = () => {
         {activeTab === 'timeline' && <Timeline />}
         {activeTab === 'wishes' && <WishJar />}
         {activeTab === 'dates' && <DatePlanner />}
-        {activeTab === 'Playlist' && <WatchPlayList />}
+        {activeTab === 'Watch & Play list' && <WatchPlayList />}
       </main>
 
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
