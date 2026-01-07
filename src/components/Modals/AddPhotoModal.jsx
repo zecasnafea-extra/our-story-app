@@ -2,26 +2,53 @@ import React, { useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 import { useStorage } from '../../hooks/useStorage';
+import { compressImage } from '../../utils/imageCompression'; // ADD THIS LINE
 
 const AddPhotoModal = ({ onClose }) => {
   const { addDocument } = useFirestore('photos');
   const { uploadFile, uploading, progress } = useStorage();
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [compressing, setCompressing] = useState(false); // ADD THIS LINE
   const [formData, setFormData] = useState({
     caption: '',
     date: new Date().toISOString().split('T')[0]
   });
 
-  const handleFileSelect = (e) => {
+  // REPLACE the handleFileSelect function with this:
+  const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedFile(file);
+      // Show preview immediately
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result);
       };
       reader.readAsDataURL(file);
+
+      // Compress the image (happens in browser, not Firebase)
+      try {
+        setCompressing(true);
+        const compressedBlob = await compressImage(file, 1920, 1920, 0.8);
+        
+        // Convert blob to file
+        const compressedFile = new File([compressedBlob], file.name, {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+        
+        setSelectedFile(compressedFile);
+        
+        // Log size reduction in console
+        const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
+        const compressedSizeMB = (compressedFile.size / 1024 / 1024).toFixed(2);
+        console.log(`✅ Compressed: ${originalSizeMB}MB → ${compressedSizeMB}MB`);
+      } catch (error) {
+        console.error('Compression failed, using original:', error);
+        setSelectedFile(file);
+      } finally {
+        setCompressing(false);
+      }
     }
   };
 
@@ -30,16 +57,12 @@ const AddPhotoModal = ({ onClose }) => {
     if (!selectedFile || !formData.caption) return;
 
     try {
-      // Upload file to Firebase Storage
       const photoUrl = await uploadFile(selectedFile, 'photos');
-      
-      // Save metadata to Firestore
       await addDocument({
         url: photoUrl,
         caption: formData.caption,
         date: formData.date
       });
-      
       onClose();
     } catch (error) {
       console.error('Error adding photo:', error);
@@ -73,6 +96,7 @@ const AddPhotoModal = ({ onClose }) => {
                 onChange={handleFileSelect}
                 className="hidden"
                 id="photo-upload"
+                disabled={compressing} // ADD THIS
               />
               <label htmlFor="photo-upload" className="cursor-pointer">
                 {preview ? (
@@ -82,13 +106,19 @@ const AddPhotoModal = ({ onClose }) => {
                       alt="Preview" 
                       className="w-full h-48 object-cover rounded-lg"
                     />
-                    <p className="text-sm text-gray-600">Click to change photo</p>
+                    {/* ADD THIS CONDITIONAL */}
+                    {compressing ? (
+                      <p className="text-sm text-blue-600">🔄 Compressing image...</p>
+                    ) : (
+                      <p className="text-sm text-gray-600">Click to change photo</p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <Upload className="mx-auto text-gray-400" size={48} />
                     <p className="text-gray-600">Click to upload photo</p>
                     <p className="text-xs text-gray-400">PNG, JPG up to 10MB</p>
+                    <p className="text-xs text-blue-600">✨ Auto-optimized for fast upload</p>
                   </div>
                 )}
               </label>
@@ -140,13 +170,13 @@ const AddPhotoModal = ({ onClose }) => {
             </div>
           )}
 
-          {/* Submit Button */}
+          {/* Submit Button - UPDATE disabled condition */}
           <button
             onClick={handleSubmit}
-            disabled={uploading || !selectedFile || !formData.caption}
+            disabled={uploading || compressing || !selectedFile || !formData.caption}
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {uploading ? 'Uploading...' : 'Add Photo'}
+            {compressing ? 'Compressing...' : uploading ? 'Uploading...' : 'Add Photo'}
           </button>
         </div>
       </div>
