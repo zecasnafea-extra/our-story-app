@@ -59,24 +59,32 @@ const Home = ({ setActiveTab }) => {
   };
 
   const handleSaveNote = async () => {
-    try {
-      if (myNoteDoc) {
-        await updateDocument('notes', myNoteDoc.id, { 
-          note: myNote, 
-          updatedAt: new Date() 
-        });
-      } else {
-        await addDocument('notes', { 
-          user: currentUserName, 
-          note: myNote, 
-          updatedAt: new Date() 
-        });
-      }
-      setIsEditingMyNote(false);
-    } catch (error) {
-      console.error('Error saving note:', error);
+  try {
+    if (myNoteDoc) {
+      // Update existing note
+      await updateDocument('notes', myNoteDoc.id, { 
+        note: myNote, 
+        updatedAt: serverTimestamp()   // use serverTimestamp for consistency
+      });
+    } else {
+      // Add new note
+      await addDocument('notes', { 
+        user: currentUserName, 
+        note: myNote, 
+        createdAt: serverTimestamp(), 
+        updatedAt: serverTimestamp()    
+      });
+
+      // Optimistically set local state so textarea updates immediately
+      setMyNote(myNote);
     }
-  };
+
+    setIsEditingMyNote(false);
+  } catch (error) {
+    console.error('Error saving note:', error);
+  }
+};
+
 
   const getDaysUntil = (date) => {
     return Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
@@ -210,7 +218,7 @@ const Home = ({ setActiveTab }) => {
       )}
 
       {/* Personal Notes Section */}
-      <div className="space-y-3 sm:space-y-4">
+      <div className="space-y-3 sm:space-y-4 overflow-x-hidden">
         {/* My Note */}
         <div className="card bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-pink-200">
           <div className="flex items-center justify-between mb-3">
@@ -261,7 +269,7 @@ const Home = ({ setActiveTab }) => {
           </p>
           {otherNoteDoc?.updatedAt && (
             <p className="text-xs text-gray-500 mt-2">
-              Updated {new Date(otherNoteDoc.updatedAt).toLocaleDateString()}
+               Updated {new Date(otherNoteDoc.updatedAt?.toDate?.()).toLocaleDateString()}
             </p>
           )}
         </div>
