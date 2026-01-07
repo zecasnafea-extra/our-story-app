@@ -2,71 +2,95 @@ import React, { useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 import { useStorage } from '../../hooks/useStorage';
-import { compressImage } from '../../utils/imageCompression'; // ADD THIS LINE
 
 const AddPhotoModal = ({ onClose }) => {
   const { addDocument } = useFirestore('photos');
-  const { uploadFile, uploading, progress } = useStorage();
+  const { uploadFile, uploading, progress, error } = useStorage();
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
-  const [compressing, setCompressing] = useState(false); // ADD THIS LINE
   const [formData, setFormData] = useState({
     caption: '',
     date: new Date().toISOString().split('T')[0]
   });
 
-  // REPLACE the handleFileSelect function with this:
-  const handleFileSelect = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Show preview immediately
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file (JPG, PNG, etc.)');
+        return;
+      }
+
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB');
+        return;
+      }
+
+      console.log('📁 File selected:', {
+        name: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        type: file.type
+      });
+
+      setSelectedFile(file);
+      
+      // Show preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result);
       };
       reader.readAsDataURL(file);
-
-      // Compress the image (happens in browser, not Firebase)
-      try {
-        setCompressing(true);
-        const compressedBlob = await compressImage(file, 1920, 1920, 0.8);
-        
-        // Convert blob to file
-        const compressedFile = new File([compressedBlob], file.name, {
-          type: 'image/jpeg',
-          lastModified: Date.now(),
-        });
-        
-        setSelectedFile(compressedFile);
-        
-        // Log size reduction in console
-        const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
-        const compressedSizeMB = (compressedFile.size / 1024 / 1024).toFixed(2);
-        console.log(`✅ Compressed: ${originalSizeMB}MB → ${compressedSizeMB}MB`);
-      } catch (error) {
-        console.error('Compression failed, using original:', error);
-        setSelectedFile(file);
-      } finally {
-        setCompressing(false);
-      }
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedFile || !formData.caption) return;
+    
+    if (!selectedFile) {
+      alert('Please select a photo');
+      return;
+    }
+
+    if (!formData.caption.trim()) {
+      alert('Please add a caption');
+      return;
+    }
 
     try {
+      console.log('🚀 Starting photo upload process...');
+      
+      // Step 1: Upload to Storage
+      console.log('📤 Step 1: Uploading to Firebase Storage...');
       const photoUrl = await uploadFile(selectedFile, 'photos');
-      await addDocument({
+      console.log('✅ Step 1 complete - Photo URL:', photoUrl);
+      
+      // Step 2: Add to Firestore
+      console.log('📝 Step 2: Adding document to Firestore...');
+      const docData = {
         url: photoUrl,
-        caption: formData.caption,
-        date: formData.date
-      });
+        caption: formData.caption.trim(),
+        date: formData.date,
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+        fileType: selectedFile.type
+      };
+      
+      const docId = await addDocument(docData);
+      console.log('✅ Step 2 complete - Document ID:', docId);
+      
+      console.log('🎉 Photo uploaded successfully!');
+      
+      // Close modal
       onClose();
     } catch (error) {
-      console.error('Error adding photo:', error);
-      alert('Failed to upload photo. Please try again.');
+      console.error('❌ ERROR OCCURRED:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Full error:', error);
+      
+      alert(`Failed to upload photo: ${error.message || 'Unknown error occurred'}`);
     }
   };
 
@@ -78,12 +102,14 @@ const AddPhotoModal = ({ onClose }) => {
           <button 
             onClick={onClose} 
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            type="button"
+            disabled={uploading}
           >
             <X size={24} />
           </button>
         </div>
 
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* File Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -96,9 +122,9 @@ const AddPhotoModal = ({ onClose }) => {
                 onChange={handleFileSelect}
                 className="hidden"
                 id="photo-upload"
-                disabled={compressing} // ADD THIS
+                disabled={uploading}
               />
-              <label htmlFor="photo-upload" className="cursor-pointer">
+              <label htmlFor="photo-upload" className="cursor-pointer block">
                 {preview ? (
                   <div className="space-y-2">
                     <img 
@@ -106,19 +132,21 @@ const AddPhotoModal = ({ onClose }) => {
                       alt="Preview" 
                       className="w-full h-48 object-cover rounded-lg"
                     />
-                    {/* ADD THIS CONDITIONAL */}
-                    {compressing ? (
-                      <p className="text-sm text-blue-600">🔄 Compressing image...</p>
-                    ) : (
-                      <p className="text-sm text-gray-600">Click to change photo</p>
+                    <p className="text-sm text-gray-600 font-medium">
+                      {selectedFile?.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {(selectedFile?.size / 1024 / 1024).toFixed(2)}MB
+                    </p>
+                    {!uploading && (
+                      <p className="text-xs text-blue-600">Click to change photo</p>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <Upload className="mx-auto text-gray-400" size={48} />
-                    <p className="text-gray-600">Click to upload photo</p>
-                    <p className="text-xs text-gray-400">PNG, JPG up to 10MB</p>
-                    <p className="text-xs text-blue-600">✨ Auto-optimized for fast upload</p>
+                    <p className="text-gray-600 font-medium">Click to upload photo</p>
+                    <p className="text-xs text-gray-400">PNG, JPG, GIF up to 10MB</p>
                   </div>
                 )}
               </label>
@@ -134,8 +162,9 @@ const AddPhotoModal = ({ onClose }) => {
               type="text"
               value={formData.caption}
               onChange={(e) => setFormData({...formData, caption: e.target.value})}
-              className="input"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
               placeholder="Describe this moment..."
+              disabled={uploading}
               required
             />
           </div>
@@ -149,10 +178,18 @@ const AddPhotoModal = ({ onClose }) => {
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({...formData, date: e.target.value})}
-              className="input"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+              disabled={uploading}
               required
             />
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <strong>Error:</strong> {error}
+            </div>
+          )}
 
           {/* Upload Progress */}
           {uploading && (
@@ -161,24 +198,27 @@ const AddPhotoModal = ({ onClose }) => {
                 <span>Uploading...</span>
                 <span>{progress}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div 
-                  className="bg-gradient-to-r from-pink-500 to-purple-600 h-2 rounded-full transition-all"
+                  className="bg-gradient-to-r from-pink-500 to-purple-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
+              <p className="text-xs text-gray-500 text-center">
+                Please don't close this window...
+              </p>
             </div>
           )}
 
-          {/* Submit Button - UPDATE disabled condition */}
+          {/* Submit Button */}
           <button
-            onClick={handleSubmit}
-            disabled={uploading || compressing || !selectedFile || !formData.caption}
-            className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            type="submit"
+            disabled={uploading || !selectedFile || !formData.caption.trim()}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {compressing ? 'Compressing...' : uploading ? 'Uploading...' : 'Add Photo'}
+            {uploading ? `Uploading... ${progress}%` : 'Add Photo 📸'}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   );
