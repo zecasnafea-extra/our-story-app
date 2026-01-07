@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Sparkles, Gift, LogOut, Heart, Check, Edit2, Save } from 'lucide-react';
+import { Clock, Sparkles, Gift, LogOut, Heart, Check, Edit2, Save, Clapperboard } from 'lucide-react';
+import { serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFirestore } from '../../hooks/useFirestore';
 import { useFirestoreUpdate } from '../../hooks/useFirestoreUpdate';
 import AddTimelineModal from '../Modals/AddTimelineModal';
 import AddWishModal from '../Modals/AddWishModal';
+import AddItemModal from '../Modals/AddItemModal';
 
 const Home = ({ setActiveTab }) => {
   const { logout, currentUser } = useAuth();
@@ -15,6 +17,7 @@ const Home = ({ setActiveTab }) => {
   const [daysTogether, setDaysTogether] = useState(0);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showWishModal, setShowWishModal] = useState(false);
+  const [showWatchPlayModal, setShowWatchPlayModal] = useState(false);
   
   // Determine current user (Zeyad or Rania)
   const isZeyad = currentUser?.email?.toLowerCase().includes('zeyad');
@@ -59,32 +62,28 @@ const Home = ({ setActiveTab }) => {
   };
 
   const handleSaveNote = async () => {
-  try {
-    if (myNoteDoc) {
-      // Update existing note
-      await updateDocument('notes', myNoteDoc.id, { 
-        note: myNote, 
-        updatedAt: serverTimestamp()   // use serverTimestamp for consistency
-      });
-    } else {
-      // Add new note
-      await addDocument('notes', { 
-        user: currentUserName, 
-        note: myNote, 
-        createdAt: serverTimestamp(), 
-        updatedAt: serverTimestamp()    
-      });
-
-      // Optimistically set local state so textarea updates immediately
-      setMyNote(myNote);
+    try {
+      if (myNoteDoc) {
+        // Update existing note
+        await updateDocument('notes', myNoteDoc.id, { 
+          note: myNote, 
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        // Add new note
+        await addDocument('notes', { 
+          user: currentUserName, 
+          note: myNote, 
+          createdAt: serverTimestamp(), 
+          updatedAt: serverTimestamp()    
+        });
+      }
+      setIsEditingMyNote(false);
+    } catch (error) {
+      console.error('Error saving note:', error);
+      alert('Failed to save note. Please try again.');
     }
-
-    setIsEditingMyNote(false);
-  } catch (error) {
-    console.error('Error saving note:', error);
-  }
-};
-
+  };
 
   const getDaysUntil = (date) => {
     return Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
@@ -269,36 +268,46 @@ const Home = ({ setActiveTab }) => {
           </p>
           {otherNoteDoc?.updatedAt && (
             <p className="text-xs text-gray-500 mt-2">
-               Updated {new Date(otherNoteDoc.updatedAt?.toDate?.()).toLocaleDateString()}
+              Updated {new Date(otherNoteDoc.updatedAt?.toDate?.()).toLocaleDateString()}
             </p>
           )}
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      {/* Quick Actions - Now 3 buttons */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <button
           onClick={() => setShowTimelineModal(true)}
-          className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white text-center cursor-pointer hover:scale-105 transition-transform"
+          className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
         >
-          <Sparkles className="mx-auto mb-2 sm:mb-3" size={32} />
-          <div className="font-semibold text-sm sm:text-lg">Add Memory</div>
-          <div className="text-xs sm:text-sm opacity-80 mt-1">Capture moment</div>
+          <Sparkles className="mx-auto mb-1 sm:mb-3" size={28} />
+          <div className="font-semibold text-xs sm:text-lg">Memory</div>
+          <div className="text-[10px] sm:text-sm opacity-80 mt-0.5 sm:mt-1 hidden sm:block">Capture moment</div>
         </button>
         
         <button
           onClick={() => setShowWishModal(true)}
-          className="card bg-gradient-to-br from-pink-500 to-pink-600 text-white text-center cursor-pointer hover:scale-105 transition-transform"
+          className="card bg-gradient-to-br from-pink-500 to-pink-600 text-white text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
         >
-          <Gift className="mx-auto mb-2 sm:mb-3" size={32} />
-          <div className="font-semibold text-sm sm:text-lg">Add Wish</div>
-          <div className="text-xs sm:text-sm opacity-80 mt-1">Make a wish</div>
+          <Gift className="mx-auto mb-1 sm:mb-3" size={28} />
+          <div className="font-semibold text-xs sm:text-lg">Wish</div>
+          <div className="text-[10px] sm:text-sm opacity-80 mt-0.5 sm:mt-1 hidden sm:block">Make a wish</div>
+        </button>
+
+        <button
+          onClick={() => setShowWatchPlayModal(true)}
+          className="card bg-gradient-to-br from-blue-500 to-cyan-600 text-white text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
+        >
+          <Clapperboard className="mx-auto mb-1 sm:mb-3" size={28} />
+          <div className="font-semibold text-xs sm:text-lg">Watch</div>
+          <div className="text-[10px] sm:text-sm opacity-80 mt-0.5 sm:mt-1 hidden sm:block">Add activity</div>
         </button>
       </div>
 
       {/* Modals */}
       {showTimelineModal && <AddTimelineModal onClose={() => setShowTimelineModal(false)} />}
       {showWishModal && <AddWishModal onClose={() => setShowWishModal(false)} />}
+      {showWatchPlayModal && <AddItemModal onClose={() => setShowWatchPlayModal(false)} />}
     </div>
   );
 };
