@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Film, Tv, Gamepad2 } from 'lucide-react';
+import { X, Film, Tv, Gamepad2, Star } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
 
 const AddItemModal = ({ onClose }) => {
@@ -8,15 +8,45 @@ const AddItemModal = ({ onClose }) => {
   const [formData, setFormData] = useState({
     title: '',
     status: 'not-started',
+    rating: 0,
+    categories: [],
     notes: '',
+    // Movie specific
     durationMinutes: '',
+    // Series specific
     totalSeasons: 1,
     totalEpisodes: 10,
     watchedEpisodes: 0,
+    // Game specific
     hoursPlayed: 0,
     estimatedHours: 10,
   });
   const [submitting, setSubmitting] = useState(false);
+
+  const movieSeriesCategories = [
+    'Action', 'Adventure', 'Comedy', 'Romance', 'Drama',
+    'Horror', 'Thriller', 'Sci-Fi', 'Fantasy', 'Animation', 'Documentary'
+  ];
+
+  const gameCategories = [
+    'Action', 'Adventure', 'Puzzle', 'Simulation',
+    'Sports', 'Casual', 'Horror'
+  ];
+
+  const categories = type === 'game' ? gameCategories : movieSeriesCategories;
+
+  const toggleCategory = (category) => {
+    setFormData(prev => ({
+      ...prev,
+      categories: prev.categories.includes(category)
+        ? prev.categories.filter(c => c !== category)
+        : [...prev.categories, category]
+    }));
+  };
+
+  const setRating = (rating) => {
+    setFormData(prev => ({ ...prev, rating }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,6 +62,8 @@ const AddItemModal = ({ onClose }) => {
         title: formData.title.trim(),
         type,
         status: formData.status,
+        rating: formData.rating,
+        categories: formData.categories,
         notes: formData.notes.trim(),
       };
 
@@ -67,7 +99,7 @@ const AddItemModal = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto animate-scale-in">
+      <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-2xl font-bold text-gray-800">➕ Add to Watch & Play</h3>
           <button
@@ -140,6 +172,72 @@ const AddItemModal = ({ onClose }) => {
               disabled={submitting}
               required
             />
+          </div>
+
+          {/* Rating */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Rating (Optional)
+            </label>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  disabled={submitting}
+                  className="transition-transform hover:scale-110"
+                >
+                  <Star
+                    size={32}
+                    className={`${
+                      star <= formData.rating
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300'
+                    } transition-colors`}
+                  />
+                </button>
+              ))}
+              {formData.rating > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRating(0)}
+                  disabled={submitting}
+                  className="ml-2 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Categories */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Categories (Select multiple)
+            </label>
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => toggleCategory(category)}
+                  disabled={submitting}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    formData.categories.includes(category)
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-400'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+            {formData.categories.length > 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.categories.length} selected
+              </p>
+            )}
           </div>
 
           {/* Status */}
