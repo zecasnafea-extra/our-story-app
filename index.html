@@ -1,17 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/heart.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ec4899" />
-    <meta name="description" content="Our Story - A private space for us" />
-    
-    <!-- Add Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <title>Our Story ❤️</title>
-  </head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Our Story - A private space for us" />
+  
+  <!-- Favicon for browser tab -->
+  <link rel="icon" type="image/png" sizes="96x96" href="%PUBLIC_URL%/favicon-96x96.png" />
+
+  <!-- Apple / iOS -->
+  <link rel="apple-touch-icon" sizes="512x512" href="%PUBLIC_URL%/web-app-manifest-512x512.png" />
+
+  <!-- Manifest for PWA / Android -->
+  <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+  <!-- Theme color for mobile browsers -->
+  <meta name="theme-color" content="#d946ef" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <title>Our Story ❤️</title>
+</head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
