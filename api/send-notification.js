@@ -1,12 +1,34 @@
-// api/send-notification.js
+// api/send-notification.js - UPDATED FOR FCM V1 API
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
+
+// Initialize Firebase Admin (only once)
+let adminApp;
+try {
+  if (!adminApp) {
+    // Service account credentials from environment variables
+    const serviceAccount = {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+    };
+
+    adminApp = initializeApp({
+      credential: cert(serviceAccount)
+    });
+  }
+} catch (error) {
+  console.log('Admin already initialized or error:', error.message);
+}
+
 export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // CORS headers - allow requests from your app
-  res.setHeader('Access-Control-Allow-Origin', 'https://our-story-app-silk.vercel.app');
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -25,65 +47,49 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('📤 Sending FCM notification:', { title, body, type });
+    console.log('📤 Sending FCM V1 notification:', { title, body, type });
 
-    // YOUR FCM SERVER KEY - Replace this!
-    const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || 'PASTE_YOUR_SERVER_KEY_HERE';
-
-    if (FCM_SERVER_KEY === 'PASTE_YOUR_SERVER_KEY_HERE') {
-      return res.status(500).json({ 
-        error: 'FCM_SERVER_KEY not configured' 
-      });
-    }
-
-    // Send to FCM
-    const fcmResponse = await fetch('https://fcm.googleapis.com/fcm/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `key=${FCM_SERVER_KEY}`
+    // Send using Firebase Admin SDK
+    const message = {
+      token: token,
+      notification: {
+        title: title,
+        body: body
       },
-      body: JSON.stringify({
-        to: token,
+      data: {
+        type: type || 'general',
+        timestamp: Date.now().toString()
+      },
+      webpush: {
         notification: {
-          title: title,
-          body: body,
           icon: '❤️',
-          click_action: 'https://our-story-app-silk.vercel.app'
+          badge: '❤️',
+          requireInteraction: true,
+          vibrate: [200, 100, 200]
         },
-        data: {
-          type: type || 'general',
-          timestamp: Date.now().toString()
-        },
-        priority: 'high',
-        webpush: {
-          headers: {
-            Urgency: 'high'
-          },
-          notification: {
-            badge: '❤️',
-            requireInteraction: true,
-            vibrate: [200, 100, 200]
-          }
+        fcmOptions: {
+          link: 'https://our-story-app-silk.vercel.app'
         }
-      })
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          sound: 'default',
+          channelId: 'our_story_notifications',
+          icon: 'heart_icon',
+          color: '#ec4899'
+        }
+      }
+    };
+
+    const messaging = getMessaging(adminApp);
+    const response = await messaging.send(message);
+
+    console.log('✅ FCM notification sent successfully:', response);
+    return res.status(200).json({ 
+      success: true, 
+      messageId: response 
     });
-
-    const result = await fcmResponse.json();
-
-    if (result.success === 1) {
-      console.log('✅ FCM notification sent successfully');
-      return res.status(200).json({ 
-        success: true, 
-        message: 'Notification sent' 
-      });
-    } else {
-      console.error('❌ FCM error:', result);
-      return res.status(500).json({ 
-        success: false, 
-        error: result 
-      });
-    }
 
   } catch (error) {
     console.error('❌ Server error:', error);
