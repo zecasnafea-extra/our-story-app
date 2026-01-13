@@ -198,19 +198,6 @@ export const useSimpleNotifications = (currentUser) => {
         isFirstLoad
       });
 
-      // Show browser notification for new notifications (fallback)
-      if (!isFirstLoad && newNotifications.length > 0 && Notification.permission === 'granted') {
-        console.log('🔔 Showing browser notification for:', newNotifications[0]);
-        newNotifications.forEach(notif => {
-          new Notification(notif.title, {
-            body: notif.body,
-            icon: '❤️',
-            badge: '❤️',
-            tag: notif.id
-          });
-        });
-      }
-
       isFirstLoad = false;
     });
 
