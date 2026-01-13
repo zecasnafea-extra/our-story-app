@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { X, DollarSign } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
+import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';  // ← ADD THIS
+import { useAuth } from '../../contexts/AuthContext';  // ← ADD THIS
 
 const AddDateModal = ({ onClose, editItem = null }) => {
   const { addDocument, updateDocument } = useFirestore('dateIdeas');
+  const { currentUser } = useAuth();  // ← ADD THIS
+  const { sendNotification } = useSimpleNotifications(currentUser);  // ← ADD THIS
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: editItem?.title || '',
@@ -32,7 +36,12 @@ const AddDateModal = ({ onClose, editItem = null }) => {
         await updateDocument(editItem.id, formData);
       } else {
         await addDocument(formData);
+        
+        // ← ADD THIS: Send notification (only when adding, not editing)
+        const template = NotificationTemplates.dateAdded(formData.title);
+        await sendNotification(template.title, template.body, template.type);
       }
+      
       onClose();
     } catch (error) {
       console.error('Error saving date idea:', error);
