@@ -7,12 +7,14 @@ import { useFirestoreUpdate } from '../../hooks/useFirestoreUpdate';
 import AddTimelineModal from '../Modals/AddTimelineModal';
 import AddWishModal from '../Modals/AddWishModal';
 import AddItemModal from '../Modals/AddItemModal';
+import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';  // ← ADD THIS at top
 
 const Home = ({ setActiveTab }) => {
   const { logout, currentUser } = useAuth();
   const { documents: timeline } = useFirestore('timeline');
   const { documents: notes } = useFirestore('notes');
   const { updateDocument, addDocument } = useFirestoreUpdate();
+  const { sendNotification } = useSimpleNotifications(currentUser);  // ← ADD THIS with other hooks
   
   const [daysTogether, setDaysTogether] = useState(0);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
@@ -78,6 +80,10 @@ const Home = ({ setActiveTab }) => {
           updatedAt: serverTimestamp()    
         });
       }
+
+      const userName = isZeyad ? 'Zeyad' : 'Rania';
+      const template = NotificationTemplates.noteUpdated(userName);
+      await sendNotification(template.title, template.body, template.type);
       setIsEditingMyNote(false);
     } catch (error) {
       console.error('Error saving note:', error);
