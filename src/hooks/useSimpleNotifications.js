@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, where, onSnapshot, orderBy, limit, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, addDoc, query, where, onSnapshot, orderBy, limit, serverTimestamp, setDoc, doc } from 'firebase/firestore';
+import { db, messaging, VAPID_KEY } from '../firebase/config';
+import { getToken, onMessage } from 'firebase/messaging';
 
 export const useSimpleNotifications = (currentUser) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [fcmToken, setFcmToken] = useState(null);
 
   // Get current user name
   const getCurrentUserName = () => {
@@ -19,7 +21,82 @@ export const useSimpleNotifications = (currentUser) => {
     return email.includes('zeyad') ? 'Rania' : 'Zeyad';
   };
 
-  // Listen for notifications
+  // Request FCM token and save to Firestore
+  const requestFCMToken = async () => {
+    if (!messaging) {
+      console.log('❌ FCM not supported on this browser');
+      return null;
+    }
+
+    try {
+      console.log('🔑 Requesting FCM token...');
+      
+      // Register service worker
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      console.log('✅ Service Worker registered');
+
+      // Request permission
+      const permission = await Notification.requestPermission();
+      console.log('🔔 Notification permission:', permission);
+
+      if (permission !== 'granted') {
+        console.log('❌ Notification permission denied');
+        return null;
+      }
+
+      // Get FCM token
+      const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: registration
+      });
+
+      console.log('✅ FCM Token received:', token);
+
+      // Save token to Firestore for this user
+      const userName = getCurrentUserName();
+      if (userName && currentUser) {
+        await setDoc(doc(db, 'fcmTokens', currentUser.uid), {
+          token,
+          user: userName,
+          updatedAt: serverTimestamp()
+        });
+        console.log('✅ FCM Token saved to Firestore');
+      }
+
+      setFcmToken(token);
+      return token;
+
+    } catch (error) {
+      console.error('❌ Error getting FCM token:', error);
+      return null;
+    }
+  };
+
+  // Listen for foreground messages
+  useEffect(() => {
+    if (!messaging) return;
+
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log('📬 Foreground message received:', payload);
+
+      const title = payload.notification?.title || payload.data?.title || 'New Notification';
+      const body = payload.notification?.body || payload.data?.body || '';
+
+      // Show notification even when app is in foreground
+      if (Notification.permission === 'granted') {
+        new Notification(title, {
+          body,
+          icon: '❤️',
+          badge: '❤️',
+          tag: payload.data?.notificationId || 'foreground-notif'
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [messaging]);
+
+  // Listen for notifications from Firestore
   useEffect(() => {
     if (!currentUser) return;
 
@@ -53,7 +130,6 @@ export const useSimpleNotifications = (currentUser) => {
         
         if (!data.read) {
           unread++;
-          // Check if this is a truly new notification (not from initial load)
           if (!isFirstLoad && !previousNotificationIds.has(doc.id)) {
             newNotifications.push(notification);
           }
@@ -72,7 +148,7 @@ export const useSimpleNotifications = (currentUser) => {
         isFirstLoad
       });
 
-      // Show browser notification ONLY for truly new notifications
+      // Show browser notification for new notifications (fallback)
       if (!isFirstLoad && newNotifications.length > 0 && Notification.permission === 'granted') {
         console.log('🔔 Showing browser notification for:', newNotifications[0]);
         newNotifications.forEach(notif => {
@@ -80,7 +156,7 @@ export const useSimpleNotifications = (currentUser) => {
             body: notif.body,
             icon: '❤️',
             badge: '❤️',
-            tag: notif.id // Prevent duplicate notifications
+            tag: notif.id
           });
         });
       }
@@ -94,7 +170,7 @@ export const useSimpleNotifications = (currentUser) => {
     };
   }, [currentUser]);
 
-  // Request browser notification permission
+  // Request permission (browser notifications + FCM)
   const requestPermission = async () => {
     if ('Notification' in window) {
       console.log('🔔 Current notification permission:', Notification.permission);
@@ -102,7 +178,18 @@ export const useSimpleNotifications = (currentUser) => {
       if (Notification.permission === 'default') {
         const permission = await Notification.requestPermission();
         console.log('🔔 Permission result:', permission);
+        
+        if (permission === 'granted') {
+          // Also request FCM token
+          await requestFCMToken();
+        }
+        
         return permission === 'granted';
+      }
+      
+      // If already granted, ensure we have FCM token
+      if (Notification.permission === 'granted' && !fcmToken) {
+        await requestFCMToken();
       }
       
       return Notification.permission === 'granted';
@@ -146,11 +233,12 @@ export const useSimpleNotifications = (currentUser) => {
     notifications,
     unreadCount,
     requestPermission,
-    sendNotification
+    sendNotification,
+    fcmToken
   };
 };
 
-// Quick notification templates (keep this exactly as you have it)
+// Quick notification templates
 export const NotificationTemplates = {
   wishAdded: () => ({
     title: '💝 New Wish!',
