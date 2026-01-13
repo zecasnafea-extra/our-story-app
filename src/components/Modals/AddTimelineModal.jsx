@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
+import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';  // ← ADD THIS
+import { useAuth } from '../../contexts/AuthContext';  // ← ADD THIS
 
 const AddTimelineModal = ({ onClose, editItem = null }) => {
   const { addDocument, updateDocument } = useFirestore('timeline');
+  const { currentUser } = useAuth();  // ← ADD THIS
+  const { sendNotification } = useSimpleNotifications(currentUser);  // ← ADD THIS
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     type: editItem?.type || '',
@@ -34,7 +38,12 @@ const AddTimelineModal = ({ onClose, editItem = null }) => {
           ...dataToSave,
           isCompleted: formData.type === 'date' ? false : true
         });
+        
+        // ← ADD THIS: Send notification (only when adding, not editing)
+        const template = NotificationTemplates.timelineAdded(formData.title);
+        await sendNotification(template.title, template.body, template.type);
       }
+      
       onClose();
     } catch (error) {
       console.error('Error saving timeline item:', error);
@@ -42,6 +51,7 @@ const AddTimelineModal = ({ onClose, editItem = null }) => {
     }
     setLoading(false);
   };
+
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
