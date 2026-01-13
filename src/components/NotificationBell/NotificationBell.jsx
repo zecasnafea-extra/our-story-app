@@ -19,6 +19,15 @@ const NotificationBell = () => {
     }
   }, [currentUser, hasRequestedPermission, requestPermission]);
 
+  // Debug: Log when notifications change
+  useEffect(() => {
+    console.log('🔔 NotificationBell - notifications updated:', {
+      count: notifications.length,
+      unread: unreadCount,
+      notifications: notifications.map(n => ({ id: n.id, title: n.title, read: n.read }))
+    });
+  }, [notifications, unreadCount]);
+
   const markAsRead = async (notificationId) => {
     try {
       await updateDoc(doc(db, 'notifications', notificationId), {
