@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { X, Film, Tv, Gamepad2, Star } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
+import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';  // ← ADD THIS
+import { useAuth } from '../../contexts/AuthContext';  // ← ADD THIS
 
 const AddItemModal = ({ onClose }) => {
   const { addDocument } = useFirestore('activities');
+  const { currentUser } = useAuth();  // ← ADD THIS
+  const { sendNotification } = useSimpleNotifications(currentUser);  // ← ADD THIS
   const [type, setType] = useState('movie');
   const [formData, setFormData] = useState({
     title: '',
@@ -11,13 +15,10 @@ const AddItemModal = ({ onClose }) => {
     rating: 0,
     categories: [],
     notes: '',
-    // Movie specific
     durationMinutes: '',
-    // Series specific
     totalSeasons: 1,
     totalEpisodes: 10,
     watchedEpisodes: 0,
-    // Game specific
     hoursPlayed: 0,
     estimatedHours: 10,
   });
@@ -87,6 +88,11 @@ const AddItemModal = ({ onClose }) => {
       }
 
       await addDocument({ ...baseData, ...specificData });
+      
+      // ← ADD THIS: Send notification
+      const template = NotificationTemplates.watchPlayAdded(formData.title, type);
+      await sendNotification(template.title, template.body, template.type);
+      
       console.log('✅ Item added successfully!');
       onClose();
     } catch (error) {
