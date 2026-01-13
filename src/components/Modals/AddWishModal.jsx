@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
+import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';  // ← ADD THIS
+import { useAuth } from '../../contexts/AuthContext';  // ← ADD THIS
 
 const AddWishModal = ({ onClose }) => {
   const { addDocument } = useFirestore('wishes');
+  const { currentUser } = useAuth();  // ← ADD THIS
+  const { sendNotification } = useSimpleNotifications(currentUser);  // ← ADD THIS
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     text: '',
@@ -23,6 +27,11 @@ const AddWishModal = ({ onClose }) => {
         unlockDate: formData.unlockDate || null,
         isRevealed: false
       });
+      
+      // ← ADD THIS: Send notification to partner
+      const template = NotificationTemplates.wishAdded();
+      await sendNotification(template.title, template.body, template.type);
+      
       onClose();
     } catch (error) {
       console.error('Error adding wish:', error);
