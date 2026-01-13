@@ -1,4 +1,4 @@
-// hooks/useSimpleNotifications.js - CLIENT-SIDE VERSION (No Cloud Functions)
+// hooks/useSimpleNotifications.js - VERCEL VERSION
 import { useState, useEffect } from 'react';
 import { collection, addDoc, query, where, onSnapshot, orderBy, limit, serverTimestamp, setDoc, doc, getDocs } from 'firebase/firestore';
 import { db, messaging, VAPID_KEY } from '../firebase/config';
@@ -8,8 +8,6 @@ export const useSimpleNotifications = (currentUser) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [fcmToken, setFcmToken] = useState(null);
-
-  const FCM_SERVER_KEY = 'BGsB9nJaBmVyrMa2YOy61R9a3nsSe1pX7_td3UuMpfqK0vAvF2-IuM19SzcMOf0UXkgMB8chOklDle4HwNNajeE'; // Replace this!
 
   const getCurrentUserName = () => {
     if (!currentUser) return null;
@@ -45,57 +43,35 @@ export const useSimpleNotifications = (currentUser) => {
     }
   };
 
-  // Send FCM push notification directly
+  // Send FCM push via Vercel serverless function
   const sendFCMPush = async (token, title, body, type) => {
-    if (!FCM_SERVER_KEY || FCM_SERVER_KEY === 'PASTE_YOUR_SERVER_KEY_HERE') {
-      console.warn('⚠️ FCM Server Key not configured. Push notifications disabled.');
-      return false;
-    }
-
     try {
-      const response = await fetch('https://fcm.googleapis.com/fcm/send', {
+      console.log('📤 Calling Vercel API to send push...');
+      
+      const response = await fetch('/api/send-notification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `key=${FCM_SERVER_KEY}`
         },
         body: JSON.stringify({
-          to: token,
-          notification: {
-            title: title,
-            body: body,
-            icon: '❤️',
-            click_action: 'https://our-story-app-silk.vercel.app'
-          },
-          data: {
-            type: type,
-            timestamp: Date.now().toString()
-          },
-          priority: 'high',
-          webpush: {
-            headers: {
-              Urgency: 'high'
-            },
-            notification: {
-              badge: '❤️',
-              requireInteraction: true,
-              vibrate: [200, 100, 200]
-            }
-          }
+          token,
+          title,
+          body,
+          type
         })
       });
 
       const result = await response.json();
       
-      if (result.success === 1) {
-        console.log('✅ FCM push notification sent successfully');
+      if (result.success) {
+        console.log('✅ Push notification sent via Vercel API');
         return true;
       } else {
-        console.error('❌ FCM push failed:', result);
+        console.error('❌ Vercel API error:', result);
         return false;
       }
     } catch (error) {
-      console.error('❌ Error sending FCM push:', error);
+      console.error('❌ Error calling Vercel API:', error);
       return false;
     }
   };
@@ -270,7 +246,7 @@ export const useSimpleNotifications = (currentUser) => {
     return false;
   };
 
-  // Send notification to partner (WITH FCM PUSH)
+  // Send notification to partner (via Vercel API)
   const sendNotification = async (title, body, type = 'general') => {
     try {
       const partnerName = getPartnerName();
@@ -297,7 +273,7 @@ export const useSimpleNotifications = (currentUser) => {
 
       console.log(`✅ Notification saved to Firestore for ${partnerName}`);
 
-      // Send FCM push notification directly
+      // Send FCM push via Vercel API
       const partnerToken = await getPartnerFCMToken();
       if (partnerToken) {
         await sendFCMPush(partnerToken, title, body, type);
@@ -320,7 +296,7 @@ export const useSimpleNotifications = (currentUser) => {
   };
 };
 
-// Notification templates (keep as before)
+// Notification templates
 export const NotificationTemplates = {
   wishAdded: () => ({
     title: '💝 New Wish!',
