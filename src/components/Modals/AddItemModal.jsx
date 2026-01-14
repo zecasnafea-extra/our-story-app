@@ -5,7 +5,7 @@ import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSi
 import { useAuth } from '../../contexts/AuthContext';  // ← ADD THIS
 
 const AddItemModal = ({ onClose }) => {
-  const { addDocument } = useFirestore('activities');
+  const { addDocument } = useFirestore('watchlist');
   const { currentUser } = useAuth();  // ← ADD THIS
   const { sendNotification } = useSimpleNotifications(currentUser);  // ← ADD THIS
   const [type, setType] = useState('movie');
