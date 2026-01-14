@@ -123,24 +123,14 @@ export const useSimpleNotifications = (currentUser) => {
     }
   };
 
-  // Listen for foreground messages
+  // Listen for foreground messages (disabled - FCM handles all notifications now)
   useEffect(() => {
     if (!messaging) return;
 
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log('📬 Foreground message received:', payload);
-
-      const title = payload.notification?.title || payload.data?.title || 'New Notification';
-      const body = payload.notification?.body || payload.data?.body || '';
-
-      if (Notification.permission === 'granted') {
-        new Notification(title, {
-          body,
-          icon: '❤️',
-          badge: '❤️',
-          tag: payload.data?.notificationId || 'foreground-notif'
-        });
-      }
+      // Let FCM handle the notification display
+      // No need to manually show notification here
     });
 
     return () => unsubscribe();
@@ -197,6 +187,8 @@ export const useSimpleNotifications = (currentUser) => {
         newCount: newNotifications.length,
         isFirstLoad
       });
+
+      // Browser notification fallback removed - using FCM push instead
 
       isFirstLoad = false;
     });
