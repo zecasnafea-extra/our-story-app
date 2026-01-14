@@ -19,14 +19,15 @@ const NotificationBell = () => {
     }
   }, [currentUser, hasRequestedPermission, requestPermission]);
 
-  // Debug: Log when notifications change
-  useEffect(() => {
-    console.log('🔔 NotificationBell - notifications updated:', {
-      count: notifications.length,
-      unread: unreadCount,
-      notifications: notifications.map(n => ({ id: n.id, title: n.title, read: n.read }))
-    });
-  }, [notifications, unreadCount]);
+  // Sort notifications: unread first, then by time
+  const sortedNotifications = [...notifications].sort((a, b) => {
+    // Unread always comes first
+    if (a.read !== b.read) {
+      return a.read ? 1 : -1;
+    }
+    // Then sort by time (newest first)
+    return b.createdAt - a.createdAt;
+  }).slice(0, 5); // Show only 5 most recent/unread
 
   const markAsRead = async (notificationId) => {
     try {
@@ -106,7 +107,7 @@ const NotificationBell = () => {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {notifications.map((notif) => (
+                  {sortedNotifications.map((notif) => (
                     <div
                       key={notif.id}
                       className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
