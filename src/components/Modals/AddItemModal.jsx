@@ -1,28 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Film, Tv, Gamepad2, Star } from 'lucide-react';
 import { useFirestore } from '../../hooks/useFirestore';
-import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';  // ← ADD THIS
-import { useAuth } from '../../contexts/AuthContext';  // ← ADD THIS
+import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';
+import { useAuth } from '../../contexts/AuthContext';
 
-const AddItemModal = ({ onClose }) => {
-  const { addDocument } = useFirestore('watchlist');
-  const { currentUser } = useAuth();  // ← ADD THIS
-  const { sendNotification } = useSimpleNotifications(currentUser);  // ← ADD THIS
-  const [type, setType] = useState('movie');
+const AddItemModal = ({ onClose, editItem = null }) => {  // ← ADD editItem prop
+  const { addDocument, updateDocument } = useFirestore('watchlist');  // ← ADD updateDocument
+  const { currentUser } = useAuth();
+  const { sendNotification } = useSimpleNotifications(currentUser);
+  
+  // ← Initialize with editItem data if editing
+  const [type, setType] = useState(editItem?.type || 'movie');
   const [formData, setFormData] = useState({
-    title: '',
-    status: 'not-started',
-    rating: 0,
-    categories: [],
-    notes: '',
-    durationMinutes: '',
-    totalSeasons: 1,
-    totalEpisodes: 10,
-    watchedEpisodes: 0,
-    hoursPlayed: 0,
-    estimatedHours: 10,
+    title: editItem?.title || '',
+    status: editItem?.status || 'not-started',
+    rating: editItem?.rating || 0,
+    categories: editItem?.categories || [],
+    notes: editItem?.notes || '',
+    durationMinutes: editItem?.durationMinutes || '',
+    totalSeasons: editItem?.totalSeasons || 1,
+    totalEpisodes: editItem?.totalEpisodes || 10,
+    watchedEpisodes: editItem?.watchedEpisodes || 0,
+    hoursPlayed: editItem?.hoursPlayed || 0,
+    estimatedHours: editItem?.estimatedHours || 10,
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // ← Update form when editItem changes
+  useEffect(() => {
+    if (editItem) {
+      setType(editItem.type);
+      setFormData({
+        title: editItem.title || '',
+        status: editItem.status || 'not-started',
+        rating: editItem.rating || 0,
+        categories: editItem.categories || [],
+        notes: editItem.notes || '',
+        durationMinutes: editItem.durationMinutes || '',
+        totalSeasons: editItem.totalSeasons || 1,
+        totalEpisodes: editItem.totalEpisodes || 10,
+        watchedEpisodes: editItem.watchedEpisodes || 0,
+        hoursPlayed: editItem.hoursPlayed || 0,
+        estimatedHours: editItem.estimatedHours || 10,
+      });
+    }
+  }, [editItem]);
 
   const movieSeriesCategories = [
     'Action', 'Adventure', 'Comedy', 'Romance', 'Drama',
@@ -87,17 +109,25 @@ const AddItemModal = ({ onClose }) => {
         };
       }
 
-      await addDocument({ ...baseData, ...specificData });
+      const fullData = { ...baseData, ...specificData };
+
+      // ← Check if editing or adding
+      if (editItem) {
+        // UPDATE existing item
+        await updateDocument(editItem.id, fullData);
+        console.log('✅ Item updated successfully!');
+      } else {
+        // ADD new item
+        await addDocument(fullData);
+        const template = NotificationTemplates.watchPlayAdded(formData.title, type);
+        await sendNotification(template.title, template.body, template.type);
+        console.log('✅ Item added successfully!');
+      }
       
-      // ← ADD THIS: Send notification
-      const template = NotificationTemplates.watchPlayAdded(formData.title, type);
-      await sendNotification(template.title, template.body, template.type);
-      
-      console.log('✅ Item added successfully!');
       onClose();
     } catch (error) {
-      console.error('❌ Error adding item:', error);
-      alert('Failed to add item. Please try again.');
+      console.error('❌ Error saving item:', error);
+      alert('Failed to save item. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -107,7 +137,9 @@ const AddItemModal = ({ onClose }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-scale-in">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-gray-800">➕ Add to Watch & Play</h3>
+          <h3 className="text-2xl font-bold text-gray-800">
+            {editItem ? '✏️ Edit Item' : '➕ Add to Watch & Play'}
+          </h3>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -119,7 +151,7 @@ const AddItemModal = ({ onClose }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Type Selection */}
+          {/* Type Selection - Disable when editing */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Type *
@@ -128,11 +160,12 @@ const AddItemModal = ({ onClose }) => {
               <button
                 type="button"
                 onClick={() => setType('movie')}
+                disabled={editItem !== null}  // ← Disable type change when editing
                 className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${
                   type === 'movie'
                     ? 'border-red-500 bg-red-50 text-red-600'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                } ${editItem ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Film size={24} />
                 <span className="text-xs font-medium">Movie</span>
@@ -140,11 +173,12 @@ const AddItemModal = ({ onClose }) => {
               <button
                 type="button"
                 onClick={() => setType('series')}
+                disabled={editItem !== null}
                 className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${
                   type === 'series'
                     ? 'border-blue-500 bg-blue-50 text-blue-600'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                } ${editItem ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Tv size={24} />
                 <span className="text-xs font-medium">Series</span>
@@ -152,16 +186,22 @@ const AddItemModal = ({ onClose }) => {
               <button
                 type="button"
                 onClick={() => setType('game')}
+                disabled={editItem !== null}
                 className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${
                   type === 'game'
                     ? 'border-purple-500 bg-purple-50 text-purple-600'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                } ${editItem ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Gamepad2 size={24} />
                 <span className="text-xs font-medium">Game</span>
               </button>
             </div>
+            {editItem && (
+              <p className="text-xs text-gray-500 mt-1">
+                Type cannot be changed when editing
+              </p>
+            )}
           </div>
 
           {/* Title */}
@@ -386,7 +426,9 @@ const AddItemModal = ({ onClose }) => {
             disabled={submitting || !formData.title.trim()}
             className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Adding...' : `Add ${type.charAt(0).toUpperCase() + type.slice(1)}`}
+            {submitting 
+              ? (editItem ? 'Updating...' : 'Adding...') 
+              : (editItem ? 'Update Item' : `Add ${type.charAt(0).toUpperCase() + type.slice(1)}`)}
           </button>
         </form>
       </div>
