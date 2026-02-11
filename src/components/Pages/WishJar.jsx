@@ -8,21 +8,14 @@ const WishJar = () => {
   const [showModal, setShowModal] = useState(false);
 
   const revealWish = async (id) => {
-    try {
-      await updateDocument(id, { isRevealed: true });
-    } catch (error) {
-      console.error('Error revealing wish:', error);
-    }
+    try { await updateDocument(id, { isRevealed: true }); }
+    catch (error) { console.error('Error revealing wish:', error); }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this wish?')) {
-      try {
-        await deleteDocument(id);
-      } catch (error) {
-        console.error('Error deleting wish:', error);
-        alert('Failed to delete wish. Please try again.');
-      }
+      try { await deleteDocument(id); }
+      catch (error) { console.error('Error deleting wish:', error); alert('Failed to delete wish. Please try again.'); }
     }
   };
 
@@ -32,16 +25,18 @@ const WishJar = () => {
   };
 
   return (
-    <div className="p-6 animate-fade-in">
+    <div className="p-6 animate-fade-in" style={{ background: '#0B0B0C', minHeight: '100vh' }}>
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">Wish Jar</h2>
-          <p className="text-gray-600 text-sm mt-1">Dreams we share together 🫙</p>
+          <h2 className="text-3xl font-semibold" style={{ color: '#C89B3C' }}>Wish Jar</h2>
+          <p className="text-sm mt-1" style={{ color: '#787878' }}>Dreams we share together 🫙</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all"
+          className="text-white p-3 rounded-full shadow-lg hover:scale-110 transition-all"
+          style={{ background: 'linear-gradient(135deg, #5C3A21 0%, #C89B3C 100%)', boxShadow: '0 4px 15px rgba(200,155,60,0.25)' }}
         >
           <Plus size={24} />
         </button>
@@ -52,13 +47,18 @@ const WishJar = () => {
         {wishes.map((wish, index) => (
           <div
             key={wish.id}
-            className="card bg-gradient-to-br from-purple-50 via-pink-50 to-yellow-50 border-2 border-purple-200 animate-slide-up relative group"
-            style={{ animationDelay: `${index * 100}ms` }}
+            className="card animate-slide-up relative group"
+            style={{
+              animationDelay: `${index * 100}ms`,
+              background: 'linear-gradient(135deg, #1A1A1C 0%, #201A08 50%, #1A1A1C 100%)',
+              border: '1px solid rgba(200,155,60,0.25)'
+            }}
           >
             {wish.isRevealed && (
               <button
                 onClick={() => handleDelete(wish.id)}
-                className="absolute top-4 right-4 p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
+                className="absolute top-4 right-4 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10"
+                style={{ background: 'rgba(180,50,50,0.15)', color: '#E05555' }}
               >
                 <Trash2 size={18} />
               </button>
@@ -67,29 +67,26 @@ const WishJar = () => {
             {wish.isRevealed ? (
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <Gift className="text-pink-500 flex-shrink-0 mt-1" size={24} />
+                  <Gift style={{ color: '#C89B3C', flexShrink: 0, marginTop: '0.25rem' }} size={24} />
                   <div className="flex-1">
-                    <p className="text-lg font-medium text-gray-800 leading-relaxed">
+                    <p className="text-lg font-medium leading-relaxed" style={{ color: '#E8E8E8' }}>
                       {wish.text}
                     </p>
                   </div>
                 </div>
-                <div className="flex justify-between items-center pt-3 border-t border-purple-200">
-                  <span className="text-sm text-gray-600">
-                    — {wish.createdBy || 'Anonymous'}
-                  </span>
-                  <span className="text-xs text-purple-600 font-medium">
-                    Revealed ✨
-                  </span>
+                <div className="flex justify-between items-center pt-3" style={{ borderTop: '1px solid rgba(200,155,60,0.15)' }}>
+                  <span className="text-sm" style={{ color: '#787878' }}>— {wish.createdBy || 'Anonymous'}</span>
+                  <span className="text-xs font-medium" style={{ color: '#C89B3C' }}>Revealed ✨</span>
                 </div>
               </div>
             ) : (
               <div className="text-center py-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full mb-4 animate-pulse">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 animate-pulse"
+                  style={{ background: 'linear-gradient(135deg, #5C3A21 0%, #C89B3C 100%)', boxShadow: '0 0 20px rgba(200,155,60,0.25)' }}>
                   <Gift className="text-white" size={40} />
                 </div>
-                <p className="text-gray-600 font-medium mb-4">A wish is waiting...</p>
-                
+                <p className="font-medium mb-4" style={{ color: '#A8A8A8' }}>A wish is waiting...</p>
+
                 {canReveal(wish) ? (
                   <div className="space-y-2">
                     <button
@@ -100,25 +97,25 @@ const WishJar = () => {
                     </button>
                     <button
                       onClick={() => handleDelete(wish.id)}
-                      className="block mx-auto text-sm text-red-600 hover:text-red-700 font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="block mx-auto text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ color: '#E05555', marginTop: '0.5rem' }}
                     >
                       Delete
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-500">Locked until</p>
-                    <p className="text-pink-600 font-semibold">
+                    <p className="text-sm" style={{ color: '#787878' }}>Locked until</p>
+                    <p className="font-semibold" style={{ color: '#C89B3C' }}>
                       {new Date(wish.unlockDate).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
+                        year: 'numeric', month: 'long', day: 'numeric'
                       })}
                     </p>
                     <div className="mt-3 text-2xl">🔒</div>
                     <button
                       onClick={() => handleDelete(wish.id)}
-                      className="block mx-auto text-sm text-red-600 hover:text-red-700 font-medium opacity-0 group-hover:opacity-100 transition-opacity mt-4"
+                      className="block mx-auto text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity mt-4"
+                      style={{ color: '#E05555' }}
                     >
                       Delete
                     </button>
@@ -130,7 +127,7 @@ const WishJar = () => {
         ))}
 
         {wishes.length === 0 && (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16" style={{ color: '#787878' }}>
             <div className="text-6xl mb-4">🫙</div>
             <p className="text-lg">No wishes yet</p>
             <p className="text-sm mt-2">Add your dreams and wishes together</p>
