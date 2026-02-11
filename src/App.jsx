@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import Auth from './components/Auth/Auth';
 import Navigation from './components/Navigation/Navigation';
-import NotificationBell from './components/NotificationBell/NotificationBell';  // ← ADD THIS
+import NotificationBell from './components/NotificationBell/NotificationBell';
 import Home from './components/Pages/Home';
 import Timeline from './components/Pages/Timeline.jsx';
 import WishJar from './components/Pages/WishJar';
 import DatePlanner from './components/Pages/DatePlanner';
 import WatchPlayList from './components/Pages/WatchPlayList';
+import RamadanTracker from './components/Pages/RamadanTracker';  // ← ADD THIS
 
 const AppContent = () => {
   const { currentUser } = useAuth();
@@ -20,11 +21,11 @@ const AppContent = () => {
   return (
     <div className="min-h-screen pb-20">
       <header className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-6 shadow-lg sticky top-0 z-10">
-        <div className="flex items-center justify-between">  {/* ← CHANGE THIS */}
+        <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold flex items-center gap-2">
             ❤️ Our Story
           </h1>
-          <NotificationBell />  {/* ← ADD THIS */}
+          <NotificationBell />
         </div>
       </header>
       
@@ -34,6 +35,7 @@ const AppContent = () => {
         {activeTab === 'wishes' && <WishJar />}
         {activeTab === 'dates' && <DatePlanner />}
         {activeTab === 'watch-play' && <WatchPlayList />}
+        {activeTab === 'ramadan' && <RamadanTracker />}  {/* ← ADD THIS */}
       </main>
       
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
