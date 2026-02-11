@@ -7,31 +7,29 @@ import { useFirestoreUpdate } from '../../hooks/useFirestoreUpdate';
 import AddTimelineModal from '../Modals/AddTimelineModal';
 import AddWishModal from '../Modals/AddWishModal';
 import AddItemModal from '../Modals/AddItemModal';
-import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';  // ← ADD THIS at top
+import { useSimpleNotifications, NotificationTemplates } from '../../hooks/useSimpleNotifications';
 
 const Home = ({ setActiveTab }) => {
   const { logout, currentUser } = useAuth();
   const { documents: timeline } = useFirestore('timeline');
   const { documents: notes } = useFirestore('notes');
   const { updateDocument, addDocument } = useFirestoreUpdate();
-  const { sendNotification } = useSimpleNotifications(currentUser);  // ← ADD THIS with other hooks
-  
+  const { sendNotification } = useSimpleNotifications(currentUser);
+
   const [daysTogether, setDaysTogether] = useState(0);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showWishModal, setShowWishModal] = useState(false);
   const [showWatchPlayModal, setShowWatchPlayModal] = useState(false);
-  
-  // Determine current user (Zeyad or Rania)
+
   const isZeyad = currentUser?.email?.toLowerCase().includes('zeyad');
   const currentUserName = isZeyad ? 'zeyad' : 'rania';
   const otherUserName = isZeyad ? 'rania' : 'zeyad';
-  
-  // Notes state
+
   const [myNote, setMyNote] = useState('');
   const [isEditingMyNote, setIsEditingMyNote] = useState(false);
   const myNoteDoc = notes.find(n => n.user === currentUserName);
   const otherNoteDoc = notes.find(n => n.user === otherUserName);
-  
+
   const startDate = new Date('2025-12-09');
 
   useEffect(() => {
@@ -41,9 +39,7 @@ const Home = ({ setActiveTab }) => {
   }, []);
 
   useEffect(() => {
-    if (myNoteDoc) {
-      setMyNote(myNoteDoc.note || '');
-    }
+    if (myNoteDoc) setMyNote(myNoteDoc.note || '');
   }, [myNoteDoc]);
 
   const upcomingEvents = timeline
@@ -51,36 +47,21 @@ const Home = ({ setActiveTab }) => {
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .slice(0, 3);
 
-  const sortedTimeline = [...timeline].sort((a, b) => 
+  const sortedTimeline = [...timeline].sort((a, b) =>
     new Date(a.date) - new Date(b.date)
   ).slice(0, 8);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    try { await logout(); } catch (error) { console.error('Logout error:', error); }
   };
 
   const handleSaveNote = async () => {
     try {
       if (myNoteDoc) {
-        // Update existing note
-        await updateDocument('notes', myNoteDoc.id, { 
-          note: myNote, 
-          updatedAt: serverTimestamp()
-        });
+        await updateDocument('notes', myNoteDoc.id, { note: myNote, updatedAt: serverTimestamp() });
       } else {
-        // Add new note
-        await addDocument('notes', { 
-          user: currentUserName, 
-          note: myNote, 
-          createdAt: serverTimestamp(), 
-          updatedAt: serverTimestamp()    
-        });
+        await addDocument('notes', { user: currentUserName, note: myNote, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
       }
-
       const userName = isZeyad ? 'Zeyad' : 'Rania';
       const template = NotificationTemplates.noteUpdated(userName);
       await sendNotification(template.title, template.body, template.type);
@@ -91,38 +72,30 @@ const Home = ({ setActiveTab }) => {
     }
   };
 
-  const getDaysUntil = (date) => {
-    return Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
-  };
+  const getDaysUntil = (date) => Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
 
-  const getTypeEmoji = (type) => {
-    const emojis = {
-      milestone: '🏆',
-      event: '🎉',
-      date: '📅'
-    };
-    return emojis[type] || '✨';
-  };
+  const getTypeEmoji = (type) => ({ milestone: '🏆', event: '🎉', date: '📅' })[type] || '✨';
 
-  const getTypeConfig = (type) => {
-    const configs = {
-      milestone: { dotColor: 'bg-yellow-500' },
-      event: { dotColor: 'bg-blue-500' },
-      date: { dotColor: 'bg-purple-500' }
-    };
-    return configs[type] || configs.event;
-  };
+  const getTypeConfig = (type) => ({
+    milestone: { dotColor: 'bg-yellow-600' },
+    event:     { dotColor: 'bg-yellow-700' },
+    date:      { dotColor: 'bg-yellow-800' }
+  })[type] || { dotColor: 'bg-yellow-700' };
 
   return (
-    <div className="p-4 sm:p-6 pb-24 space-y-4 sm:space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 pb-24 space-y-4 sm:space-y-6 animate-fade-in" style={{ background: '#0B0B0C', minHeight: '100vh' }}>
+
       {/* User Info & Logout */}
       <div className="flex justify-between items-center">
-        <p className="text-xs sm:text-sm text-gray-600 truncate flex-1 mr-2">
-          Logged in as <span className="font-medium">{currentUser?.email}</span>
+        <p className="text-xs sm:text-sm truncate flex-1 mr-2" style={{ color: '#787878' }}>
+          Logged in as <span className="font-medium" style={{ color: '#A8A8A8' }}>{currentUser?.email}</span>
         </p>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-gray-600 hover:text-red-600 transition-colors flex-shrink-0"
+          className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm transition-colors flex-shrink-0"
+          style={{ color: '#787878' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#C89B3C'}
+          onMouseLeave={e => e.currentTarget.style.color = '#787878'}
         >
           <LogOut size={14} className="sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Logout</span>
@@ -130,63 +103,65 @@ const Home = ({ setActiveTab }) => {
       </div>
 
       {/* Days Counter */}
-      <div className="card bg-gradient-to-br from-pink-500 to-purple-600 text-white text-center animate-scale-in">
-        <div className="text-5xl sm:text-7xl font-bold mb-2 sm:mb-3">{daysTogether}</div>
-        <div className="text-xl sm:text-2xl font-medium opacity-90 mb-1 sm:mb-2">Days Together</div>
-        <div className="text-xs sm:text-sm opacity-75">Since December 9, 2025</div>
+      <div className="card text-center animate-scale-in" style={{
+        background: 'linear-gradient(135deg, #2A1A08 0%, #3D2810 50%, #1A1208 100%)',
+        border: '1px solid rgba(200,155,60,0.35)',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.5), 0 0 30px rgba(200,155,60,0.1)'
+      }}>
+        <div className="text-5xl sm:text-7xl font-bold mb-2 sm:mb-3" style={{ color: '#C89B3C' }}>{daysTogether}</div>
+        <div className="text-xl sm:text-2xl font-medium mb-1 sm:mb-2" style={{ color: '#E8E8E8', opacity: 0.9 }}>Days Together</div>
+        <div className="text-xs sm:text-sm" style={{ color: '#A8A8A8' }}>Since December 9, 2025</div>
       </div>
 
       {/* Horizontal Timeline */}
       {sortedTimeline.length > 0 && (
         <div className="card">
           <div className="flex justify-between items-center mb-3 sm:mb-4">
-            <h3 className="font-bold text-lg sm:text-xl flex items-center gap-2 text-gray-800">
-              <Sparkles className="text-purple-500" size={20} />
+            <h3 className="font-semibold text-lg sm:text-xl flex items-center gap-2" style={{ color: '#E8E8E8' }}>
+              <Sparkles style={{ color: '#C89B3C' }} size={20} />
               <span>Our Journey</span>
             </h3>
             <button
               onClick={() => setActiveTab('timeline')}
-              className="text-xs sm:text-sm text-pink-600 hover:text-pink-700 font-medium whitespace-nowrap"
+              className="text-xs sm:text-sm font-medium whitespace-nowrap"
+              style={{ color: '#C89B3C' }}
             >
               View All →
             </button>
           </div>
-          
+
           <div className="overflow-x-auto pb-4 -mx-2 px-2">
             <div className="inline-flex items-center min-w-full">
               {sortedTimeline.map((item, index) => {
                 const config = getTypeConfig(item.type);
                 const itemDate = new Date(item.date);
-                
                 return (
                   <React.Fragment key={item.id}>
                     <div className="flex flex-col items-center animate-scale-in" style={{ animationDelay: `${index * 100}ms` }}>
-                      <div className="text-xs font-medium text-gray-500 mb-2 whitespace-nowrap">
+                      <div className="text-xs font-medium mb-2 whitespace-nowrap" style={{ color: '#787878' }}>
                         {itemDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
-                      
-                      <div className={`relative ${config.dotColor} rounded-full p-2.5 sm:p-3 border-4 border-white shadow-lg hover:scale-110 transition-transform cursor-pointer group`}>
+                      <div className={`relative ${config.dotColor} rounded-full p-2.5 sm:p-3 border-4 shadow-lg hover:scale-110 transition-transform cursor-pointer group`}
+                        style={{ borderColor: '#2A2A30' }}>
                         <span className="text-xl sm:text-2xl">{getTypeEmoji(item.type)}</span>
                         {item.isCompleted && (
-                          <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1">
+                          <div className="absolute -top-1 -right-1 rounded-full p-1" style={{ background: '#C89B3C' }}>
                             <Check size={10} className="text-white sm:w-3 sm:h-3" />
                           </div>
                         )}
-                        
-                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-3 py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl">
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg text-xs sm:text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 shadow-xl"
+                          style={{ background: '#1A1A1C', border: '1px solid #2A2A30', color: '#E8E8E8' }}>
                           <div className="font-semibold">{item.title}</div>
-                          <div className="text-xs opacity-75">{item.type}</div>
-                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                          <div className="text-xs" style={{ color: '#787878' }}>{item.type}</div>
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent" style={{ borderTopColor: '#1A1A1C' }}></div>
                         </div>
                       </div>
-                      
-                      <div className="text-xs font-medium text-gray-700 mt-2 max-w-[80px] sm:max-w-[100px] text-center line-clamp-2">
+                      <div className="text-xs font-medium mt-2 max-w-[80px] sm:max-w-[100px] text-center line-clamp-2" style={{ color: '#A8A8A8' }}>
                         {item.title}
                       </div>
                     </div>
-                    
                     {index < sortedTimeline.length - 1 && (
-                      <div className="h-1 w-12 sm:w-16 bg-gradient-to-r from-pink-300 to-purple-300 flex-shrink-0 mt-10" />
+                      <div className="h-1 w-12 sm:w-16 flex-shrink-0 mt-10" style={{ background: 'linear-gradient(to right, #5C3A21, #C89B3C)' }} />
                     )}
                   </React.Fragment>
                 );
@@ -199,20 +174,21 @@ const Home = ({ setActiveTab }) => {
       {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
         <div className="card animate-slide-up">
-          <h3 className="font-bold text-lg sm:text-xl mb-3 sm:mb-4 flex items-center gap-2 text-gray-800">
-            <Clock className="text-pink-500" size={20} />
+          <h3 className="font-semibold text-lg sm:text-xl mb-3 sm:mb-4 flex items-center gap-2" style={{ color: '#E8E8E8' }}>
+            <Clock style={{ color: '#C89B3C' }} size={20} />
             Coming Up
           </h3>
           <div className="space-y-2 sm:space-y-3">
             {upcomingEvents.map(event => (
-              <div 
-                key={event.id} 
-                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl hover:shadow-md transition-shadow"
+              <div
+                key={event.id}
+                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl hover:shadow-md transition-shadow"
+                style={{ background: 'rgba(200,155,60,0.06)', border: '1px solid rgba(200,155,60,0.15)' }}
               >
                 <div className="text-2xl sm:text-3xl flex-shrink-0">{getTypeEmoji(event.type)}</div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-800 text-sm sm:text-base truncate">{event.title}</div>
-                  <div className="text-xs sm:text-sm text-pink-600 font-medium">
+                  <div className="font-semibold text-sm sm:text-base truncate" style={{ color: '#E8E8E8' }}>{event.title}</div>
+                  <div className="text-xs sm:text-sm font-medium" style={{ color: '#C89B3C' }}>
                     {getDaysUntil(event.date)} days away
                   </div>
                 </div>
@@ -225,56 +201,68 @@ const Home = ({ setActiveTab }) => {
       {/* Personal Notes Section */}
       <div className="space-y-3 sm:space-y-4 overflow-x-hidden">
         {/* My Note */}
-        <div className="card bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-pink-200">
+        <div className="card" style={{
+          background: 'linear-gradient(135deg, #1A1A1C 0%, #201810 100%)',
+          border: '1px solid rgba(200,155,60,0.25)'
+        }}>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-base sm:text-lg text-gray-800 flex items-center gap-2">
-              <Heart className="text-pink-500" size={18} />
+            <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2" style={{ color: '#E8E8E8' }}>
+              <Heart style={{ color: '#C89B3C' }} size={18} />
               {isZeyad ? 'Zeyad' : 'Rania'}'s Note
             </h3>
             {!isEditingMyNote ? (
               <button
                 onClick={() => setIsEditingMyNote(true)}
-                className="text-pink-600 hover:text-pink-700 p-2 hover:bg-pink-200 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: '#C89B3C' }}
               >
                 <Edit2 size={16} />
               </button>
             ) : (
               <button
                 onClick={handleSaveNote}
-                className="text-green-600 hover:text-green-700 p-2 hover:bg-green-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: '#8F7B5E' }}
               >
                 <Save size={16} />
               </button>
             )}
           </div>
-          
           {isEditingMyNote ? (
             <textarea
               value={myNote}
               onChange={(e) => setMyNote(e.target.value)}
               placeholder="Write a sweet note..."
-              className="w-full p-3 rounded-xl border-2 border-pink-300 focus:border-pink-500 focus:outline-none text-sm sm:text-base resize-none"
+              className="w-full p-3 rounded-xl text-sm sm:text-base resize-none focus:outline-none"
+              style={{
+                background: '#0B0B0C',
+                border: '2px solid rgba(200,155,60,0.3)',
+                color: '#E8E8E8'
+              }}
               rows="3"
             />
           ) : (
-            <p className="text-sm sm:text-base text-gray-700 italic">
+            <p className="text-sm sm:text-base italic" style={{ color: '#A8A8A8' }}>
               {myNote || 'Click edit to add your note ✨'}
             </p>
           )}
         </div>
 
         {/* Other Person's Note */}
-        <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
-          <h3 className="font-bold text-base sm:text-lg text-gray-800 mb-3 flex items-center gap-2">
-            <Heart className="text-purple-500" size={18} />
+        <div className="card" style={{
+          background: 'linear-gradient(135deg, #1A1A1C 0%, #181520 100%)',
+          border: '1px solid rgba(143,123,94,0.25)'
+        }}>
+          <h3 className="font-semibold text-base sm:text-lg mb-3 flex items-center gap-2" style={{ color: '#E8E8E8' }}>
+            <Heart style={{ color: '#8F7B5E' }} size={18} />
             {isZeyad ? 'Rania' : 'Zeyad'}'s Note
           </h3>
-          <p className="text-sm sm:text-base text-gray-700 italic">
+          <p className="text-sm sm:text-base italic" style={{ color: '#A8A8A8' }}>
             {otherNoteDoc?.note || 'No note yet 💭'}
           </p>
           {otherNoteDoc?.updatedAt && (
-            <p className="text-xs text-gray-500 mt-2">
-              Updated {otherNoteDoc.updatedAt instanceof Date 
+            <p className="text-xs mt-2" style={{ color: '#787878' }}>
+              Updated {otherNoteDoc.updatedAt instanceof Date
                 ? otherNoteDoc.updatedAt.toLocaleDateString()
                 : otherNoteDoc.updatedAt?.toDate?.()?.toLocaleDateString() || 'recently'}
             </p>
@@ -282,37 +270,51 @@ const Home = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {/* Quick Actions - Now 3 buttons */}
+      {/* Quick Actions */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <button
           onClick={() => setShowTimelineModal(true)}
-          className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
+          className="card text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
+          style={{
+            background: 'linear-gradient(135deg, #2A1A08 0%, #5C3A21 100%)',
+            border: '1px solid rgba(200,155,60,0.3)',
+            boxShadow: '0 4px 15px rgba(200,155,60,0.15)'
+          }}
         >
-          <Sparkles className="mx-auto mb-1 sm:mb-3" size={28} />
-          <div className="font-semibold text-xs sm:text-lg">Memory</div>
-          <div className="text-[10px] sm:text-sm opacity-80 mt-0.5 sm:mt-1 hidden sm:block">Capture moment</div>
+          <Sparkles className="mx-auto mb-1 sm:mb-3" size={28} style={{ color: '#C89B3C' }} />
+          <div className="font-semibold text-xs sm:text-lg" style={{ color: '#E8E8E8' }}>Memory</div>
+          <div className="text-[10px] sm:text-sm mt-0.5 sm:mt-1 hidden sm:block" style={{ color: '#A8A8A8' }}>Capture moment</div>
         </button>
-        
+
         <button
           onClick={() => setShowWishModal(true)}
-          className="card bg-gradient-to-br from-pink-500 to-pink-600 text-white text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
+          className="card text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
+          style={{
+            background: 'linear-gradient(135deg, #1A1208 0%, #3D2810 100%)',
+            border: '1px solid rgba(200,155,60,0.3)',
+            boxShadow: '0 4px 15px rgba(200,155,60,0.15)'
+          }}
         >
-          <Gift className="mx-auto mb-1 sm:mb-3" size={28} />
-          <div className="font-semibold text-xs sm:text-lg">Wish</div>
-          <div className="text-[10px] sm:text-sm opacity-80 mt-0.5 sm:mt-1 hidden sm:block">Make a wish</div>
+          <Gift className="mx-auto mb-1 sm:mb-3" size={28} style={{ color: '#C89B3C' }} />
+          <div className="font-semibold text-xs sm:text-lg" style={{ color: '#E8E8E8' }}>Wish</div>
+          <div className="text-[10px] sm:text-sm mt-0.5 sm:mt-1 hidden sm:block" style={{ color: '#A8A8A8' }}>Make a wish</div>
         </button>
 
         <button
           onClick={() => setShowWatchPlayModal(true)}
-          className="card bg-gradient-to-br from-blue-500 to-cyan-600 text-white text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
+          className="card text-center cursor-pointer hover:scale-105 transition-transform p-3 sm:p-6"
+          style={{
+            background: 'linear-gradient(135deg, #0F1A18 0%, #1A3028 100%)',
+            border: '1px solid rgba(143,123,94,0.3)',
+            boxShadow: '0 4px 15px rgba(143,123,94,0.1)'
+          }}
         >
-          <Clapperboard className="mx-auto mb-1 sm:mb-3" size={28} />
-          <div className="font-semibold text-xs sm:text-lg">Watch</div>
-          <div className="text-[10px] sm:text-sm opacity-80 mt-0.5 sm:mt-1 hidden sm:block">Add activity</div>
+          <Clapperboard className="mx-auto mb-1 sm:mb-3" size={28} style={{ color: '#8F7B5E' }} />
+          <div className="font-semibold text-xs sm:text-lg" style={{ color: '#E8E8E8' }}>Watch</div>
+          <div className="text-[10px] sm:text-sm mt-0.5 sm:mt-1 hidden sm:block" style={{ color: '#A8A8A8' }}>Add activity</div>
         </button>
       </div>
 
-      {/* Modals */}
       {showTimelineModal && <AddTimelineModal onClose={() => setShowTimelineModal(false)} />}
       {showWishModal && <AddWishModal onClose={() => setShowWishModal(false)} />}
       {showWatchPlayModal && <AddItemModal onClose={() => setShowWatchPlayModal(false)} />}
