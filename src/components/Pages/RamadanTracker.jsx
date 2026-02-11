@@ -139,7 +139,7 @@ const RamadanTracker = () => {
         <div>
           <h2 className="text-2xl sm:text-3xl font-semibold flex items-center gap-2" style={{ color: '#E8E8E8' }}>
             <Moon style={{ color: '#C89B3C' }} size={32} />
-            🌙 Ramadan Tracker
+            Ramadan Tracker
           </h2>
           <p className="text-sm mt-1" style={{ color: '#A8A8A8' }}>
             {ramadanDay ? `Day ${ramadanDay} of 30 • ` : ''}
