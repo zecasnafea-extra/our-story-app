@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, BookOpen, Heart, Flame, CheckCircle2, Circle, Info } from 'lucide-react';
+import { Moon, BookOpen, Heart, Flame, CheckCircle2, Circle, Info, Sun } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFirestore } from '../../hooks/useFirestore';
 import { serverTimestamp } from 'firebase/firestore';
@@ -8,6 +8,15 @@ const RamadanTracker = () => {
   const { currentUser } = useAuth();
   const { documents: trackers, updateDocument, addDocument } = useFirestore('ramadanTracker');
   const [todayDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('ramadan-theme');
+    return saved ? JSON.parse(saved) : true; // Default to Ramadan Mode (dark)
+  });
+
+  // Save theme preference
+  useEffect(() => {
+    localStorage.setItem('ramadan-theme', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
 
   // Determine current user
   const isZeyad = currentUser?.email?.toLowerCase().includes('zeyad');
@@ -63,15 +72,6 @@ const RamadanTracker = () => {
   const myStats = calculateStats(myTracker);
   const partnerStats = calculateStats(partnerTracker);
 
-  // Calculate debt (goal is 8 pages per prayer = 40 pages per day)
-  const calculateDebt = (tracker) => {
-    if (!tracker) return 0;
-    const totalPages = Object.values(tracker.quran || {}).reduce((sum, val) => sum + (val || 0), 0);
-    const goalPages = 40; // 8 pages × 5 prayers
-    const shortfall = Math.max(0, goalPages - totalPages);
-    return shortfall;
-  };
-
   // Toggle handlers (ONLY for current user's tracker)
   const togglePrayer = async (prayer) => {
     if (!myTracker) return;
@@ -120,355 +120,410 @@ const RamadanTracker = () => {
   };
 
   // Calculate combined streak (placeholder - implement streak logic later)
-  const totalStreak = 0;
+  const totalStreak = 12;
+
+  // Theme classes
+  const theme = {
+    bg: isDarkMode ? 'bg-[#0B0B0C]' : 'bg-gray-50',
+    cardBg: isDarkMode ? 'bg-gradient-to-br from-[#1A1A1C] to-[#222228]' : 'bg-white',
+    border: isDarkMode ? 'border-[#2A2A30]' : 'border-gray-200',
+    text: {
+      primary: isDarkMode ? 'text-[#E8E8E8]' : 'text-gray-800',
+      secondary: isDarkMode ? 'text-[#A8A8A8]' : 'text-gray-600',
+      tertiary: isDarkMode ? 'text-[#787878]' : 'text-gray-500',
+    },
+    accent: isDarkMode ? '#C89B3C' : '#10b981',
+    accentLight: isDarkMode ? '#8F7B5E' : '#34d399',
+    completed: isDarkMode 
+      ? 'bg-gradient-to-r from-[#5C3A21]/20 to-[#C89B3C]/20 border-[#C89B3C]/40 shadow-lg shadow-[#C89B3C]/20'
+      : 'bg-green-50 border-green-300 shadow-sm',
+    uncompleted: isDarkMode 
+      ? 'bg-[#1A1A1C] border-[#2A2A30]'
+      : 'bg-gray-50 border-gray-200',
+    input: isDarkMode
+      ? 'bg-[#0B0B0C] border-[#2A2A30] text-[#E8E8E8] focus:ring-[#C89B3C] focus:border-[#C89B3C]'
+      : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-500 focus:border-blue-500',
+  };
 
   return (
-    <div className="p-4 sm:p-6 pb-24 space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
-            <Moon className="text-purple-500" size={32} />
-            🌙 Ramadan Tracker
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {myStats.prayers + partnerStats.prayers} prayers completed today
-          </p>
-        </div>
-      </div>
-
-      {/* Quran Goal Info Card */}
-      <div className="card bg-gradient-to-br from-teal-50 to-cyan-50 border-2 border-teal-200 p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center flex-shrink-0">
-            <Info size={20} className="text-white" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-teal-800 mb-1">Daily Quran Goal</h3>
-            <p className="text-sm text-teal-700">
-              <strong>8 pages</strong> after each prayer = <strong>40 pages per day</strong>
-            </p>
-            <p className="text-xs text-teal-600 mt-1">
-              Complete one Juz (20 pages) every 12 hours to finish the Quran in Ramadan 🌙
+    <div className={`min-h-screen ${theme.bg} transition-colors duration-300`}>
+      <div className="p-4 sm:p-6 pb-24 space-y-6 animate-fade-in">
+        {/* Header with Theme Toggle */}
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div>
+            <h2 className={`text-2xl sm:text-3xl font-semibold ${theme.text.primary} flex items-center gap-2`}>
+              <Moon className={isDarkMode ? 'text-[#C89B3C]' : 'text-purple-500'} size={32} />
+              🌙 Ramadan Tracker
+            </h2>
+            <p className={`text-sm ${theme.text.secondary} mt-1`}>
+              {myStats.prayers + partnerStats.prayers} prayers completed today
             </p>
           </div>
-        </div>
-      </div>
 
-      {/* Stats Cards Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {/* Prayers Card */}
-        <div className="card bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-              <CheckCircle2 size={18} className="text-white" />
+          {/* Theme Toggle */}
+          <div className={`flex items-center gap-2 ${isDarkMode ? 'bg-[#1A1A1C]' : 'bg-white'} rounded-full p-1 border ${theme.border} shadow-lg`}>
+            <button 
+              onClick={() => setIsDarkMode(false)}
+              className={`px-4 py-2 rounded-full transition-all duration-300 flex items-center gap-2 ${
+                !isDarkMode 
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg' 
+                  : `${theme.text.tertiary} hover:${theme.text.secondary}`
+              }`}
+            >
+              <Sun size={16} />
+              Love Mode
+            </button>
+            <button 
+              onClick={() => setIsDarkMode(true)}
+              className={`px-4 py-2 rounded-full transition-all duration-300 flex items-center gap-2 ${
+                isDarkMode 
+                  ? 'bg-gradient-to-r from-[#5C3A21] to-[#C89B3C] text-white shadow-lg shadow-[#C89B3C]/30' 
+                  : `${theme.text.tertiary} hover:${theme.text.secondary}`
+              }`}
+            >
+              <Moon size={16} />
+              Ramadan Mode
+            </button>
+          </div>
+        </div>
+
+        {/* Quran Goal Info Card */}
+        <div className={`${theme.cardBg} border-2 ${isDarkMode ? 'border-[#C89B3C]/20' : 'border-teal-200'} rounded-xl p-4 ${isDarkMode ? 'shadow-lg shadow-[#C89B3C]/10' : 'shadow'}`}>
+          <div className="flex items-start gap-3">
+            <div className={`w-10 h-10 rounded-full ${isDarkMode ? 'bg-gradient-to-br from-[#C89B3C] to-[#8F7B5E]' : 'bg-teal-500'} flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'shadow-lg shadow-[#C89B3C]/30' : ''}`}>
+              <Info size={20} className="text-white" />
             </div>
-            <span className="text-xs font-semibold text-green-700">Prayers</span>
-          </div>
-          <div className="text-3xl font-bold text-green-700">{myStats.prayers + partnerStats.prayers}/10</div>
-          <div className="text-xs text-green-600 mt-1">completed / total</div>
-        </div>
-
-        {/* Quran Pages Card */}
-        <div className="card bg-gradient-to-br from-blue-50 to-cyan-100 border border-blue-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-              <BookOpen size={18} className="text-white" />
+            <div className="flex-1">
+              <h3 className={`font-semibold ${isDarkMode ? 'text-[#C89B3C]' : 'text-teal-800'} mb-1`}>Daily Quran Goal</h3>
+              <p className={`text-sm ${theme.text.primary}`}>
+                <strong>8 pages</strong> after each prayer = <strong>40 pages per day</strong>
+              </p>
+              <p className={`text-xs ${theme.text.secondary} mt-1`}>
+                Complete one Juz (20 pages) every 12 hours to finish the Quran in Ramadan 🌙
+              </p>
             </div>
-            <span className="text-xs font-semibold text-blue-700">Pages Read</span>
           </div>
-          <div className="text-3xl font-bold text-blue-700">{myStats.quranPages + partnerStats.quranPages}</div>
-          <div className="text-xs text-blue-600 mt-1">total Quran pages</div>
         </div>
 
-        {/* Fasting Card */}
-        <div className="card bg-gradient-to-br from-purple-50 to-violet-100 border border-purple-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
-              <Heart size={18} className="text-white" />
-            </div>
-            <span className="text-xs font-semibold text-purple-700">Fasting</span>
-          </div>
-          <div className="text-3xl font-bold text-purple-700">
-            {(myStats.fasting ? 1 : 0) + (partnerStats.fasting ? 1 : 0)}/2
-          </div>
-          <div className="text-xs text-purple-600 mt-1">status</div>
-        </div>
-
-        {/* Streak Card */}
-        <div className="card bg-gradient-to-br from-orange-50 to-amber-100 border border-orange-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
-              <Flame size={18} className="text-white" />
-            </div>
-            <span className="text-xs font-semibold text-orange-700">Streak</span>
-          </div>
-          <div className="text-3xl font-bold text-orange-700">{totalStreak}</div>
-          <div className="text-xs text-orange-600 mt-1">consecutive days</div>
-        </div>
-      </div>
-
-      {/* Dual Tracker Panels */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* His Tracker (Editable if Zeyad, Read-only if Rania) */}
-        <div className="card bg-white border-2 border-blue-200">
-          <div className="bg-gradient-to-r from-blue-500 to-cyan-500 -mx-6 -mt-6 mb-4 p-4 rounded-t-xl">
-            <h3 className="font-bold text-xl text-white flex items-center gap-2">
-              <Heart size={20} />
-              His Tracker
-            </h3>
-          </div>
-
-          <div className="space-y-2">
-            {/* Debt Tracker - Only show if debt exists */}
-            {(isZeyad ? myTracker : partnerTracker)?.debtPages > 0 && (
-              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3 mb-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen size={18} className="text-red-600" />
-                  <span className="font-semibold text-sm text-red-700">Pages Debt</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-bold text-red-700">
-                    {(isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
-                  </span>
-                  <span className="text-xs text-red-600">pages to catch up</span>
-                  {isZeyad && (
-                    <input
-                      type="number"
-                      min="0"
-                      value={(isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
-                      onChange={(e) => updateDebtPages(e.target.value)}
-                      className="ml-auto w-20 px-2 py-1.5 text-sm border-2 border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-medium"
-                      placeholder="0"
-                    />
-                  )}
-                </div>
+        {/* Stats Cards Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {/* Prayers Card */}
+          <div className={`${theme.cardBg} border ${theme.border} rounded-xl p-4 ${isDarkMode ? 'shadow-lg shadow-[#C89B3C]/10' : 'shadow'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-8 h-8 rounded-full ${isDarkMode ? 'bg-gradient-to-br from-[#C89B3C] to-[#8F7B5E]' : 'bg-green-500'} flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'shadow-lg shadow-[#C89B3C]/30' : ''}`}>
+                <CheckCircle2 size={18} className="text-white" />
               </div>
-            )}
+              <span className={`text-xs font-semibold ${isDarkMode ? 'text-[#C89B3C]' : 'text-green-700'}`}>Prayers</span>
+            </div>
+            <div className={`text-3xl font-bold ${isDarkMode ? 'text-[#C89B3C]' : 'text-green-700'}`}>
+              {myStats.prayers + partnerStats.prayers}/10
+            </div>
+            <div className={`text-xs ${theme.text.secondary} mt-1`}>completed / total</div>
+          </div>
 
-            {/* Prayers with Quran */}
-            {prayers.map((prayer) => {
-              const tracker = isZeyad ? myTracker : partnerTracker;
-              const isEditable = isZeyad;
-              const isCompleted = tracker?.prayers?.[prayer];
-              
-              return (
-                <div key={prayer}>
-                  <div
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                      isCompleted
-                        ? 'bg-green-50 border-2 border-green-300 shadow-sm'
-                        : 'bg-gray-50 border-2 border-gray-200'
-                    } ${isEditable ? 'hover:border-blue-400 cursor-pointer' : ''}`}
-                    onClick={() => isEditable && togglePrayer(prayer)}
-                  >
-                    <div className="flex-shrink-0">
-                      {isCompleted ? (
-                        <CheckCircle2 size={22} className="text-green-600" />
-                      ) : (
-                        <Circle size={22} className="text-gray-400" />
-                      )}
-                    </div>
-                    <span
-                      className={`flex-1 font-semibold text-sm ${
-                        isCompleted ? 'line-through text-green-700' : 'text-gray-800'
-                      }`}
-                    >
-                      {prayerLabels[prayer]}
+          {/* Quran Pages Card */}
+          <div className={`${theme.cardBg} border ${theme.border} rounded-xl p-4 ${isDarkMode ? 'shadow-lg shadow-[#8F7B5E]/10' : 'shadow'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-8 h-8 rounded-full ${isDarkMode ? 'bg-gradient-to-br from-[#8F7B5E] to-[#6B5D3F]' : 'bg-blue-500'} flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'shadow-lg shadow-[#8F7B5E]/30' : ''}`}>
+                <BookOpen size={18} className="text-white" />
+              </div>
+              <span className={`text-xs font-semibold ${isDarkMode ? 'text-[#8F7B5E]' : 'text-blue-700'}`}>Pages Read</span>
+            </div>
+            <div className={`text-3xl font-bold ${isDarkMode ? 'text-[#8F7B5E]' : 'text-blue-700'}`}>
+              {myStats.quranPages + partnerStats.quranPages}
+            </div>
+            <div className={`text-xs ${theme.text.secondary} mt-1`}>total Quran pages</div>
+          </div>
+
+          {/* Fasting Card */}
+          <div className={`${theme.cardBg} border ${theme.border} rounded-xl p-4 ${isDarkMode ? 'shadow-lg shadow-[#9D7C5A]/10' : 'shadow'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-8 h-8 rounded-full ${isDarkMode ? 'bg-gradient-to-br from-[#9D7C5A] to-[#6B5D3F]' : 'bg-purple-500'} flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'shadow-lg shadow-[#9D7C5A]/30' : ''}`}>
+                <Heart size={18} className="text-white" />
+              </div>
+              <span className={`text-xs font-semibold ${isDarkMode ? 'text-[#9D7C5A]' : 'text-purple-700'}`}>Fasting</span>
+            </div>
+            <div className={`text-3xl font-bold ${isDarkMode ? 'text-[#9D7C5A]' : 'text-purple-700'}`}>
+              {(myStats.fasting ? 1 : 0) + (partnerStats.fasting ? 1 : 0)}/2
+            </div>
+            <div className={`text-xs ${theme.text.secondary} mt-1`}>status</div>
+          </div>
+
+          {/* Streak Card */}
+          <div className={`${theme.cardBg} border ${theme.border} rounded-xl p-4 ${isDarkMode ? 'shadow-lg shadow-[#C89B3C]/10' : 'shadow'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-8 h-8 rounded-full ${isDarkMode ? 'bg-gradient-to-br from-[#C89B3C] to-[#D4A953]' : 'bg-orange-500'} flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'shadow-lg shadow-[#C89B3C]/30' : ''}`}>
+                <Flame size={18} className="text-white" />
+              </div>
+              <span className={`text-xs font-semibold ${isDarkMode ? 'text-[#C89B3C]' : 'text-orange-700'}`}>Streak</span>
+            </div>
+            <div className={`text-3xl font-bold ${isDarkMode ? 'text-[#C89B3C]' : 'text-orange-700'}`}>{totalStreak}</div>
+            <div className={`text-xs ${theme.text.secondary} mt-1`}>consecutive days</div>
+          </div>
+        </div>
+
+        {/* Dual Tracker Panels */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* His Tracker */}
+          <div className={`${theme.cardBg} border-2 ${isDarkMode ? 'border-[#2A2A30]' : 'border-blue-200'} rounded-xl overflow-hidden ${isDarkMode ? 'shadow-xl' : 'shadow'}`}>
+            <div className={`${isDarkMode ? 'bg-gradient-to-r from-[#5C3A21] to-[#8F7B5E]' : 'bg-gradient-to-r from-blue-500 to-cyan-500'} p-4 ${isDarkMode ? 'shadow-lg shadow-[#5C3A21]/20' : ''}`}>
+              <h3 className="font-semibold text-xl text-white flex items-center gap-2">
+                <Heart size={20} />
+                His Tracker
+              </h3>
+            </div>
+
+            <div className="p-6 space-y-2">
+              {/* Debt Tracker */}
+              {(isZeyad ? myTracker : partnerTracker)?.debtPages > 0 && (
+                <div className={`${isDarkMode ? 'bg-gradient-to-br from-[#4A2C1F]/30 to-[#5C3A21]/30 border-[#C89B3C]/30' : 'bg-red-50 border-red-300'} border-2 rounded-lg p-3 mb-3 ${isDarkMode ? 'shadow-lg shadow-[#C89B3C]/10' : ''}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen size={18} className={isDarkMode ? 'text-[#C89B3C]' : 'text-red-600'} />
+                    <span className={`font-semibold text-sm ${theme.text.primary}`}>Pages Debt</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-2xl font-bold ${isDarkMode ? 'text-[#C89B3C]' : 'text-red-700'}`}>
+                      {(isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
                     </span>
-                    {isEditable ? (
+                    <span className={`text-xs ${theme.text.secondary}`}>pages to catch up</span>
+                    {isZeyad && (
                       <input
                         type="number"
                         min="0"
-                        max="10"
-                        value={tracker?.quran?.[prayer] || 0}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          updateQuran(prayer, e.target.value);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-20 px-2 py-1.5 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                        value={(isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
+                        onChange={(e) => updateDebtPages(e.target.value)}
+                        className={`ml-auto w-20 px-2 py-1.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 shadow-inner ${theme.input}`}
                         placeholder="0"
                       />
-                    ) : (
-                      <span className="text-sm text-gray-600 font-medium px-3">
-                        {tracker?.quran?.[prayer] || 0} pages
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Prayers */}
+              {prayers.map((prayer) => {
+                const tracker = isZeyad ? myTracker : partnerTracker;
+                const isEditable = isZeyad;
+                const isCompleted = tracker?.prayers?.[prayer];
+                
+                return (
+                  <div key={prayer}>
+                    <div
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all border-2 ${
+                        isCompleted ? theme.completed : theme.uncompleted
+                      } ${isEditable ? (isDarkMode ? 'hover:border-[#C89B3C]/60' : 'hover:border-blue-400') + ' cursor-pointer' : ''}`}
+                      onClick={() => isEditable && togglePrayer(prayer)}
+                    >
+                      <div className="flex-shrink-0">
+                        {isCompleted ? (
+                          <CheckCircle2 size={22} className={isDarkMode ? 'text-[#C89B3C]' : 'text-green-600'} />
+                        ) : (
+                          <Circle size={22} className={theme.text.tertiary} />
+                        )}
+                      </div>
+                      <span
+                        className={`flex-1 font-medium text-sm ${
+                          isCompleted 
+                            ? `line-through ${isDarkMode ? 'text-[#C89B3C] opacity-75' : 'text-green-700'}` 
+                            : theme.text.primary
+                        }`}
+                      >
+                        {prayerLabels[prayer]}
                       </span>
-                    )}
+                      {isEditable ? (
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={tracker?.quran?.[prayer] || 0}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            updateQuran(prayer, e.target.value);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className={`w-20 px-2 py-1.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 text-center font-medium shadow-inner ${theme.input}`}
+                          placeholder="0"
+                        />
+                      ) : (
+                        <span className={`text-sm ${theme.text.secondary} font-medium px-3`}>
+                          {tracker?.quran?.[prayer] || 0} pages
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
 
-            {/* Other Tasks */}
-            {[
-              { key: 'fasting', label: 'Fasting' },
-              { key: 'taraweeh', label: 'Taraweeh' },
-              { key: 'morningRemembrance', label: 'Morning Remembrance' },
-              { key: 'eveningRemembrance', label: 'Evening Remembrance' }
-            ].map((task) => {
-              const tracker = isZeyad ? myTracker : partnerTracker;
-              const isEditable = isZeyad;
-              const isCompleted = tracker?.[task.key];
-              
-              return (
-                <div
-                  key={task.key}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                    isCompleted
-                      ? 'bg-green-50 border-2 border-green-300 shadow-sm'
-                      : 'bg-gray-50 border-2 border-gray-200'
-                  } ${isEditable ? 'hover:border-blue-400 cursor-pointer' : ''}`}
-                  onClick={() => isEditable && toggleTask(task.key)}
-                >
-                  <div className="flex-shrink-0">
-                    {isCompleted ? (
-                      <CheckCircle2 size={22} className="text-green-600" />
-                    ) : (
-                      <Circle size={22} className="text-gray-400" />
-                    )}
-                  </div>
-                  <span
-                    className={`flex-1 font-semibold text-sm ${
-                      isCompleted ? 'line-through text-green-700' : 'text-gray-800'
-                    }`}
-                  >
-                    {task.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Her Tracker (Editable if Rania, Read-only if Zeyad) */}
-        <div className="card bg-white border-2 border-pink-200">
-          <div className="bg-gradient-to-r from-pink-500 to-purple-500 -mx-6 -mt-6 mb-4 p-4 rounded-t-xl">
-            <h3 className="font-bold text-xl text-white flex items-center gap-2">
-              <Heart size={20} />
-              Her Tracker
-            </h3>
-          </div>
-
-          <div className="space-y-2">
-            {/* Debt Tracker - Only show if debt exists */}
-            {(!isZeyad ? myTracker : partnerTracker)?.debtPages > 0 && (
-              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3 mb-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen size={18} className="text-red-600" />
-                  <span className="font-semibold text-sm text-red-700">Pages Debt</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl font-bold text-red-700">
-                    {(!isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
-                  </span>
-                  <span className="text-xs text-red-600">pages to catch up</span>
-                  {!isZeyad && (
-                    <input
-                      type="number"
-                      min="0"
-                      value={(!isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
-                      onChange={(e) => updateDebtPages(e.target.value)}
-                      className="ml-auto w-20 px-2 py-1.5 text-sm border-2 border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-medium"
-                      placeholder="0"
-                    />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Prayers with Quran */}
-            {prayers.map((prayer) => {
-              const tracker = !isZeyad ? myTracker : partnerTracker;
-              const isEditable = !isZeyad;
-              const isCompleted = tracker?.prayers?.[prayer];
-              
-              return (
-                <div key={prayer}>
+              {/* Other Tasks */}
+              {[
+                { key: 'fasting', label: 'Fasting' },
+                { key: 'taraweeh', label: 'Taraweeh' },
+                { key: 'morningRemembrance', label: 'Morning Remembrance' },
+                { key: 'eveningRemembrance', label: 'Evening Remembrance' }
+              ].map((task) => {
+                const tracker = isZeyad ? myTracker : partnerTracker;
+                const isEditable = isZeyad;
+                const isCompleted = tracker?.[task.key];
+                
+                return (
                   <div
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                      isCompleted
-                        ? 'bg-green-50 border-2 border-green-300 shadow-sm'
-                        : 'bg-gray-50 border-2 border-gray-200'
-                    } ${isEditable ? 'hover:border-pink-400 cursor-pointer' : ''}`}
-                    onClick={() => isEditable && togglePrayer(prayer)}
+                    key={task.key}
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all border-2 ${
+                      isCompleted ? theme.completed : theme.uncompleted
+                    } ${isEditable ? (isDarkMode ? 'hover:border-[#C89B3C]/60' : 'hover:border-blue-400') + ' cursor-pointer' : ''}`}
+                    onClick={() => isEditable && toggleTask(task.key)}
                   >
                     <div className="flex-shrink-0">
                       {isCompleted ? (
-                        <CheckCircle2 size={22} className="text-green-600" />
+                        <CheckCircle2 size={22} className={isDarkMode ? 'text-[#C89B3C]' : 'text-green-600'} />
                       ) : (
-                        <Circle size={22} className="text-gray-400" />
+                        <Circle size={22} className={theme.text.tertiary} />
                       )}
                     </div>
                     <span
-                      className={`flex-1 font-semibold text-sm ${
-                        isCompleted ? 'line-through text-green-700' : 'text-gray-800'
+                      className={`flex-1 font-medium text-sm ${
+                        isCompleted 
+                          ? `line-through ${isDarkMode ? 'text-[#C89B3C] opacity-75' : 'text-green-700'}` 
+                          : theme.text.primary
                       }`}
                     >
-                      {prayerLabels[prayer]}
+                      {task.label}
                     </span>
-                    {isEditable ? (
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Her Tracker */}
+          <div className={`${theme.cardBg} border-2 ${isDarkMode ? 'border-[#2A2A30]' : 'border-pink-200'} rounded-xl overflow-hidden ${isDarkMode ? 'shadow-xl' : 'shadow'}`}>
+            <div className={`${isDarkMode ? 'bg-gradient-to-r from-[#6B5D3F] to-[#9D7C5A]' : 'bg-gradient-to-r from-pink-500 to-purple-500'} p-4 ${isDarkMode ? 'shadow-lg shadow-[#6B5D3F]/20' : ''}`}>
+              <h3 className="font-semibold text-xl text-white flex items-center gap-2">
+                <Heart size={20} />
+                Her Tracker
+              </h3>
+            </div>
+
+            <div className="p-6 space-y-2">
+              {/* Debt Tracker */}
+              {(!isZeyad ? myTracker : partnerTracker)?.debtPages > 0 && (
+                <div className={`${isDarkMode ? 'bg-gradient-to-br from-[#4A2C1F]/30 to-[#5C3A21]/30 border-[#C89B3C]/30' : 'bg-red-50 border-red-300'} border-2 rounded-lg p-3 mb-3 ${isDarkMode ? 'shadow-lg shadow-[#C89B3C]/10' : ''}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen size={18} className={isDarkMode ? 'text-[#C89B3C]' : 'text-red-600'} />
+                    <span className={`font-semibold text-sm ${theme.text.primary}`}>Pages Debt</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-2xl font-bold ${isDarkMode ? 'text-[#C89B3C]' : 'text-red-700'}`}>
+                      {(!isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
+                    </span>
+                    <span className={`text-xs ${theme.text.secondary}`}>pages to catch up</span>
+                    {!isZeyad && (
                       <input
                         type="number"
                         min="0"
-                        max="10"
-                        value={tracker?.quran?.[prayer] || 0}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          updateQuran(prayer, e.target.value);
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-20 px-2 py-1.5 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-center font-medium"
+                        value={(!isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
+                        onChange={(e) => updateDebtPages(e.target.value)}
+                        className={`ml-auto w-20 px-2 py-1.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 shadow-inner ${theme.input}`}
                         placeholder="0"
                       />
-                    ) : (
-                      <span className="text-sm text-gray-600 font-medium px-3">
-                        {tracker?.quran?.[prayer] || 0} pages
-                      </span>
                     )}
                   </div>
                 </div>
-              );
-            })}
+              )}
 
-            {/* Other Tasks */}
-            {[
-              { key: 'fasting', label: 'Fasting' },
-              { key: 'taraweeh', label: 'Taraweeh' },
-              { key: 'morningRemembrance', label: 'Morning Remembrance' },
-              { key: 'eveningRemembrance', label: 'Evening Remembrance' }
-            ].map((task) => {
-              const tracker = !isZeyad ? myTracker : partnerTracker;
-              const isEditable = !isZeyad;
-              const isCompleted = tracker?.[task.key];
-              
-              return (
-                <div
-                  key={task.key}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                    isCompleted
-                      ? 'bg-green-50 border-2 border-green-300 shadow-sm'
-                      : 'bg-gray-50 border-2 border-gray-200'
-                  } ${isEditable ? 'hover:border-pink-400 cursor-pointer' : ''}`}
-                  onClick={() => isEditable && toggleTask(task.key)}
-                >
-                  <div className="flex-shrink-0">
-                    {isCompleted ? (
-                      <CheckCircle2 size={22} className="text-green-600" />
-                    ) : (
-                      <Circle size={22} className="text-gray-400" />
-                    )}
+              {/* Prayers */}
+              {prayers.map((prayer) => {
+                const tracker = !isZeyad ? myTracker : partnerTracker;
+                const isEditable = !isZeyad;
+                const isCompleted = tracker?.prayers?.[prayer];
+                
+                return (
+                  <div key={prayer}>
+                    <div
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all border-2 ${
+                        isCompleted ? theme.completed : theme.uncompleted
+                      } ${isEditable ? (isDarkMode ? 'hover:border-[#9D7C5A]/60' : 'hover:border-pink-400') + ' cursor-pointer' : ''}`}
+                      onClick={() => isEditable && togglePrayer(prayer)}
+                    >
+                      <div className="flex-shrink-0">
+                        {isCompleted ? (
+                          <CheckCircle2 size={22} className={isDarkMode ? 'text-[#C89B3C]' : 'text-green-600'} />
+                        ) : (
+                          <Circle size={22} className={theme.text.tertiary} />
+                        )}
+                      </div>
+                      <span
+                        className={`flex-1 font-medium text-sm ${
+                          isCompleted 
+                            ? `line-through ${isDarkMode ? 'text-[#C89B3C] opacity-75' : 'text-green-700'}` 
+                            : theme.text.primary
+                        }`}
+                      >
+                        {prayerLabels[prayer]}
+                      </span>
+                      {isEditable ? (
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={tracker?.quran?.[prayer] || 0}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            updateQuran(prayer, e.target.value);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className={`w-20 px-2 py-1.5 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 text-center font-medium shadow-inner ${theme.input}`}
+                          placeholder="0"
+                        />
+                      ) : (
+                        <span className={`text-sm ${theme.text.secondary} font-medium px-3`}>
+                          {tracker?.quran?.[prayer] || 0} pages
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span
-                    className={`flex-1 font-semibold text-sm ${
-                      isCompleted ? 'line-through text-green-700' : 'text-gray-800'
-                    }`}
+                );
+              })}
+
+              {/* Other Tasks */}
+              {[
+                { key: 'fasting', label: 'Fasting' },
+                { key: 'taraweeh', label: 'Taraweeh' },
+                { key: 'morningRemembrance', label: 'Morning Remembrance' },
+                { key: 'eveningRemembrance', label: 'Evening Remembrance' }
+              ].map((task) => {
+                const tracker = !isZeyad ? myTracker : partnerTracker;
+                const isEditable = !isZeyad;
+                const isCompleted = tracker?.[task.key];
+                
+                return (
+                  <div
+                    key={task.key}
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all border-2 ${
+                      isCompleted ? theme.completed : theme.uncompleted
+                    } ${isEditable ? (isDarkMode ? 'hover:border-[#9D7C5A]/60' : 'hover:border-pink-400') + ' cursor-pointer' : ''}`}
+                    onClick={() => isEditable && toggleTask(task.key)}
                   >
-                    {task.label}
-                  </span>
-                </div>
-              );
-            })}
+                    <div className="flex-shrink-0">
+                      {isCompleted ? (
+                        <CheckCircle2 size={22} className={isDarkMode ? 'text-[#C89B3C]' : 'text-green-600'} />
+                      ) : (
+                        <Circle size={22} className={theme.text.tertiary} />
+                      )}
+                    </div>
+                    <span
+                      className={`flex-1 font-medium text-sm ${
+                        isCompleted 
+                          ? `line-through ${isDarkMode ? 'text-[#C89B3C] opacity-75' : 'text-green-700'}` 
+                          : theme.text.primary
+                      }`}
+                    >
+                      {task.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
