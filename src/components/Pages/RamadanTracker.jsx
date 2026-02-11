@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, BookOpen, Heart, Flame, CheckCircle2, Circle } from 'lucide-react';
+import { Moon, BookOpen, Heart, Flame, CheckCircle2, Circle, Info } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFirestore } from '../../hooks/useFirestore';
 import { serverTimestamp } from 'firebase/firestore';
@@ -42,6 +42,7 @@ const RamadanTracker = () => {
         taraweeh: false,
         morningRemembrance: false,
         eveningRemembrance: false,
+        debtPages: 0,
         createdAt: serverTimestamp()
       };
       addDocument(initialData);
@@ -61,6 +62,15 @@ const RamadanTracker = () => {
 
   const myStats = calculateStats(myTracker);
   const partnerStats = calculateStats(partnerTracker);
+
+  // Calculate debt (goal is 8 pages per prayer = 40 pages per day)
+  const calculateDebt = (tracker) => {
+    if (!tracker) return 0;
+    const totalPages = Object.values(tracker.quran || {}).reduce((sum, val) => sum + (val || 0), 0);
+    const goalPages = 40; // 8 pages × 5 prayers
+    const shortfall = Math.max(0, goalPages - totalPages);
+    return shortfall;
+  };
 
   // Toggle handlers (ONLY for current user's tracker)
   const togglePrayer = async (prayer) => {
@@ -93,6 +103,13 @@ const RamadanTracker = () => {
     });
   };
 
+  const updateDebtPages = async (pages) => {
+    if (!myTracker) return;
+    await updateDocument(myTracker.id, {
+      debtPages: parseInt(pages) || 0
+    });
+  };
+
   const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
   const prayerLabels = {
     fajr: 'Fajr',
@@ -117,6 +134,24 @@ const RamadanTracker = () => {
           <p className="text-sm text-gray-500 mt-1">
             {myStats.prayers + partnerStats.prayers} prayers completed today
           </p>
+        </div>
+      </div>
+
+      {/* Quran Goal Info Card */}
+      <div className="card bg-gradient-to-br from-teal-50 to-cyan-50 border-2 border-teal-200 p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center flex-shrink-0">
+            <Info size={20} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-teal-800 mb-1">Daily Quran Goal</h3>
+            <p className="text-sm text-teal-700">
+              <strong>8 pages</strong> after each prayer = <strong>40 pages per day</strong>
+            </p>
+            <p className="text-xs text-teal-600 mt-1">
+              Complete one Juz (20 pages) every 12 hours to finish the Quran in Ramadan 🌙
+            </p>
+          </div>
         </div>
       </div>
 
@@ -185,6 +220,32 @@ const RamadanTracker = () => {
           </div>
 
           <div className="space-y-2">
+            {/* Debt Tracker - Only show if debt exists */}
+            {(isZeyad ? myTracker : partnerTracker)?.debtPages > 0 && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3 mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen size={18} className="text-red-600" />
+                  <span className="font-semibold text-sm text-red-700">Pages Debt</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-red-700">
+                    {(isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
+                  </span>
+                  <span className="text-xs text-red-600">pages to catch up</span>
+                  {isZeyad && (
+                    <input
+                      type="number"
+                      min="0"
+                      value={(isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
+                      onChange={(e) => updateDebtPages(e.target.value)}
+                      className="ml-auto w-20 px-2 py-1.5 text-sm border-2 border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-medium"
+                      placeholder="0"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Prayers with Quran */}
             {prayers.map((prayer) => {
               const tracker = isZeyad ? myTracker : partnerTracker;
@@ -290,6 +351,32 @@ const RamadanTracker = () => {
           </div>
 
           <div className="space-y-2">
+            {/* Debt Tracker - Only show if debt exists */}
+            {(!isZeyad ? myTracker : partnerTracker)?.debtPages > 0 && (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3 mb-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen size={18} className="text-red-600" />
+                  <span className="font-semibold text-sm text-red-700">Pages Debt</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-red-700">
+                    {(!isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
+                  </span>
+                  <span className="text-xs text-red-600">pages to catch up</span>
+                  {!isZeyad && (
+                    <input
+                      type="number"
+                      min="0"
+                      value={(!isZeyad ? myTracker : partnerTracker)?.debtPages || 0}
+                      onChange={(e) => updateDebtPages(e.target.value)}
+                      className="ml-auto w-20 px-2 py-1.5 text-sm border-2 border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-center font-medium"
+                      placeholder="0"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Prayers with Quran */}
             {prayers.map((prayer) => {
               const tracker = !isZeyad ? myTracker : partnerTracker;
