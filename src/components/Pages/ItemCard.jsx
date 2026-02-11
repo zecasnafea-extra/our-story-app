@@ -7,81 +7,71 @@ const ItemCard = ({ item, index }) => {
   const { deleteDocument, updateDocument } = useFirestore('watchlist');
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const getTypeColor = (type) => {
-    switch(type) {
-      case 'movie': return 'from-red-500 to-pink-500';
-      case 'series': return 'from-blue-500 to-cyan-500';
-      case 'game': return 'from-purple-500 to-indigo-500';
-      default: return 'from-gray-500 to-gray-600';
-    }
-  };
+  const getTypeGradient = (type) => ({
+    movie:  'linear-gradient(135deg, #3D1A08 0%, #7A3020 100%)',
+    series: 'linear-gradient(135deg, #0F1A2A 0%, #1A3050 100%)',
+    game:   'linear-gradient(135deg, #1A0D2A 0%, #3A1A50 100%)',
+  })[type] || 'linear-gradient(135deg, #1A1A1C 0%, #222228 100%)';
 
-  const getTypeIcon = (type) => {
-    switch(type) {
-      case 'movie': return <Film size={24} className="text-white" />;
-      case 'series': return <Tv size={24} className="text-white" />;
-      case 'game': return <Gamepad2 size={24} className="text-white" />;
-      default: return null;
-    }
-  };
+  const getTypeBorderColor = (type) => ({
+    movie:  'rgba(180,80,60,0.4)',
+    series: 'rgba(60,100,180,0.4)',
+    game:   'rgba(120,60,180,0.4)',
+  })[type] || 'rgba(42,42,48,1)';
 
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case 'not-started': return <Clock size={16} className="text-gray-400" />;
-      case 'in-progress': return <Play size={16} className="text-blue-500" />;
-      case 'done': return <CheckCircle2 size={16} className="text-green-500" />;
-      default: return null;
-    }
-  };
+  const getTypeAccent = (type) => ({
+    movie:  '#C87050',
+    series: '#5090C8',
+    game:   '#9060C8',
+  })[type] || '#C89B3C';
 
-  const getStatusLabel = (status) => {
-    switch(status) {
-      case 'not-started': return 'Not Started';
-      case 'in-progress': return 'In Progress';
-      case 'done': return 'Done';
-      default: return '';
-    }
-  };
+  const getTypeIcon = (type) => ({
+    movie:  <Film size={24} className="text-white" />,
+    series: <Tv size={24} className="text-white" />,
+    game:   <Gamepad2 size={24} className="text-white" />,
+  })[type] || null;
+
+  const getStatusIcon = (status) => ({
+    'not-started': <Clock size={16} style={{ color: '#787878' }} />,
+    'in-progress': <Play size={16} style={{ color: '#5090C8' }} />,
+    'done':        <CheckCircle2 size={16} style={{ color: '#C89B3C' }} />,
+  })[status] || null;
+
+  const getStatusLabel = (status) => ({
+    'not-started': 'Not Started',
+    'in-progress': 'In Progress',
+    'done':        'Done',
+  })[status] || '';
 
   const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete "${item.title}"?`)) {
-      try {
-        await deleteDocument(item.id);
-      } catch (error) {
-        console.error('Error deleting item:', error);
-        alert('Failed to delete item. Please try again.');
-      }
+      try { await deleteDocument(item.id); }
+      catch (error) { console.error('Error deleting item:', error); alert('Failed to delete item. Please try again.'); }
     }
   };
 
   const handleStatusChange = async (newStatus) => {
-    try {
-      await updateDocument(item.id, { status: newStatus });
-    } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Failed to update status. Please try again.');
-    }
+    try { await updateDocument(item.id, { status: newStatus }); }
+    catch (error) { console.error('Error updating status:', error); alert('Failed to update status. Please try again.'); }
   };
 
   const getProgress = () => {
-    if (item.type === 'series') {
-      return Math.round((item.watchedEpisodes / item.totalEpisodes) * 100);
-    } else if (item.type === 'game') {
-      return Math.round((item.hoursPlayed / item.estimatedHours) * 100);
-    }
+    if (item.type === 'series') return Math.round((item.watchedEpisodes / item.totalEpisodes) * 100);
+    if (item.type === 'game')   return Math.round((item.hoursPlayed / item.estimatedHours) * 100);
     return 0;
   };
 
   const progress = getProgress();
+  const accent = getTypeAccent(item.type);
 
   return (
     <>
       <div
         className="card group hover:shadow-xl transition-all animate-slide-up relative overflow-hidden"
-        style={{ animationDelay: `${index * 50}ms` }}
+        style={{ animationDelay: `${index * 50}ms`, padding: 0, border: `1px solid ${getTypeBorderColor(item.type)}` }}
       >
         {/* Type Header */}
-        <div className={`bg-gradient-to-r ${getTypeColor(item.type)} p-3 -mx-6 -mt-6 mb-4 flex items-center justify-between`}>
+        <div className="p-3 flex items-center justify-between" style={{ background: getTypeGradient(item.type) }}>
           <div className="flex items-center gap-2">
             {getTypeIcon(item.type)}
             <span className="text-white font-medium text-sm uppercase">{item.type}</span>
@@ -89,14 +79,16 @@ const ItemCard = ({ item, index }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowEditModal(true)}
-              className="p-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              className="p-1.5 rounded-full transition-colors"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
               title="Edit"
             >
               <Edit2 size={16} className="text-white" />
             </button>
             <button
               onClick={handleDelete}
-              className="p-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+              className="p-1.5 rounded-full transition-colors"
+              style={{ background: 'rgba(255,255,255,0.15)' }}
               title="Delete"
             >
               <Trash2 size={16} className="text-white" />
@@ -104,125 +96,117 @@ const ItemCard = ({ item, index }) => {
           </div>
         </div>
 
-        {/* Title */}
-        <h3 className="font-bold text-lg text-gray-800 mb-2 line-clamp-2">
-          {item.title}
-        </h3>
+        <div className="p-5">
+          {/* Title */}
+          <h3 className="font-bold text-lg mb-2 line-clamp-2" style={{ color: '#E8E8E8' }}>
+            {item.title}
+          </h3>
 
-        {/* Rating */}
-        {item.rating > 0 && (
-          <div className="flex items-center gap-1 mb-3">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                size={16}
-                className={star <= item.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
-              />
-            ))}
-            <span className="text-sm text-gray-600 ml-1">({item.rating}/5)</span>
+          {/* Rating */}
+          {item.rating > 0 && (
+            <div className="flex items-center gap-1 mb-3">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  size={16}
+                  style={{ color: star <= item.rating ? '#C89B3C' : '#2A2A30', fill: star <= item.rating ? '#C89B3C' : 'transparent' }}
+                />
+              ))}
+              <span className="text-sm ml-1" style={{ color: '#787878' }}>({item.rating}/5)</span>
+            </div>
+          )}
+
+          {/* Categories */}
+          {item.categories && item.categories.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {item.categories.slice(0, 3).map((category) => (
+                <span
+                  key={category}
+                  className="text-xs px-2 py-1 rounded-full font-medium"
+                  style={{ background: 'rgba(200,155,60,0.1)', color: '#8F7B5E', border: '1px solid rgba(200,155,60,0.2)' }}
+                >
+                  {category}
+                </span>
+              ))}
+              {item.categories.length > 3 && (
+                <span className="text-xs px-2 py-1 rounded-full font-medium"
+                  style={{ background: 'rgba(42,42,48,0.8)', color: '#787878', border: '1px solid #2A2A30' }}>
+                  +{item.categories.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Series progress */}
+          {item.type === 'series' && (
+            <div className="mb-3">
+              <div className="flex justify-between text-sm mb-1" style={{ color: '#A8A8A8' }}>
+                <span>Season {item.season}</span>
+                <span>{item.watchedEpisodes}/{item.totalEpisodes} episodes</span>
+              </div>
+              <div className="w-full rounded-full h-2" style={{ background: '#2A2A30' }}>
+                <div className="h-2 rounded-full transition-all" style={{ width: `${progress}%`, background: `linear-gradient(to right, #0F1A2A, ${accent})` }} />
+              </div>
+              <p className="text-xs mt-1" style={{ color: '#787878' }}>{progress}% watched</p>
+            </div>
+          )}
+
+          {/* Game progress */}
+          {item.type === 'game' && (
+            <div className="mb-3">
+              <div className="flex justify-between text-sm mb-1" style={{ color: '#A8A8A8' }}>
+                <span>{item.hoursPlayed}h played</span>
+                <span>~{item.estimatedHours}h total</span>
+              </div>
+              <div className="w-full rounded-full h-2" style={{ background: '#2A2A30' }}>
+                <div className="h-2 rounded-full transition-all" style={{ width: `${Math.min(progress, 100)}%`, background: `linear-gradient(to right, #1A0D2A, ${accent})` }} />
+              </div>
+              <p className="text-xs mt-1" style={{ color: '#787878' }}>{progress}% completed</p>
+            </div>
+          )}
+
+          {/* Movie notes */}
+          {item.type === 'movie' && item.notes && (
+            <div className="mb-3">
+              <p className="text-sm italic line-clamp-2" style={{ color: '#A8A8A8' }}>"{item.notes}"</p>
+            </div>
+          )}
+
+          {/* Status Badge */}
+          <div className="flex items-center gap-2 mb-3">
+            {getStatusIcon(item.status)}
+            <span className="text-sm font-medium" style={{ color: '#A8A8A8' }}>{getStatusLabel(item.status)}</span>
           </div>
-        )}
 
-        {/* Categories */}
-        {item.categories && item.categories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {item.categories.slice(0, 3).map((category) => (
-              <span
-                key={category}
-                className="text-xs px-2 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full font-medium"
-              >
-                {category}
-              </span>
-            ))}
-            {item.categories.length > 3 && (
-              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full font-medium">
-                +{item.categories.length - 3}
-              </span>
+          {/* Status Actions */}
+          <div className="flex gap-2 flex-wrap">
+            {item.status !== 'not-started' && (
+              <button onClick={() => handleStatusChange('not-started')}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                style={{ background: 'rgba(42,42,48,0.8)', color: '#A8A8A8', border: '1px solid #2A2A30' }}>
+                Reset
+              </button>
+            )}
+            {item.status !== 'in-progress' && (
+              <button onClick={() => handleStatusChange('in-progress')}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                style={{ background: 'rgba(15,26,42,0.8)', color: '#5090C8', border: '1px solid rgba(60,100,180,0.25)' }}>
+                Start
+              </button>
+            )}
+            {item.status !== 'done' && (
+              <button onClick={() => handleStatusChange('done')}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                style={{ background: 'rgba(200,155,60,0.1)', color: '#C89B3C', border: '1px solid rgba(200,155,60,0.25)' }}>
+                Complete
+              </button>
             )}
           </div>
-        )}
-
-        {/* Type Specific Info */}
-        {item.type === 'series' && (
-          <div className="mb-3">
-            <div className="flex justify-between text-sm text-gray-600 mb-1">
-              <span>Season {item.season}</span>
-              <span>{item.watchedEpisodes}/{item.totalEpisodes} episodes</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{progress}% watched</p>
-          </div>
-        )}
-
-        {item.type === 'game' && (
-          <div className="mb-3">
-            <div className="flex justify-between text-sm text-gray-600 mb-1">
-              <span>{item.hoursPlayed}h played</span>
-              <span>~{item.estimatedHours}h total</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-gradient-to-r from-purple-500 to-indigo-500 h-2 rounded-full transition-all"
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
-            </div>
-            <p className="text-xs text-gray-500 mt-1">{progress}% completed</p>
-          </div>
-        )}
-
-        {item.type === 'movie' && item.notes && (
-          <div className="mb-3">
-            <p className="text-sm text-gray-600 italic line-clamp-2">"{item.notes}"</p>
-          </div>
-        )}
-
-        {/* Status Badge */}
-        <div className="flex items-center gap-2 mb-3">
-          {getStatusIcon(item.status)}
-          <span className="text-sm font-medium text-gray-700">
-            {getStatusLabel(item.status)}
-          </span>
-        </div>
-
-        {/* Status Actions */}
-        <div className="flex gap-2 flex-wrap">
-          {item.status !== 'not-started' && (
-            <button
-              onClick={() => handleStatusChange('not-started')}
-              className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-            >
-              Reset
-            </button>
-          )}
-          {item.status !== 'in-progress' && (
-            <button
-              onClick={() => handleStatusChange('in-progress')}
-              className="text-xs px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium"
-            >
-              Start
-            </button>
-          )}
-          {item.status !== 'done' && (
-            <button
-              onClick={() => handleStatusChange('done')}
-              className="text-xs px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium"
-            >
-              Complete
-            </button>
-          )}
         </div>
       </div>
 
       {showEditModal && (
-        <AddItemModal
-          editItem={item}
-          onClose={() => setShowEditModal(false)}
-        />
+        <AddItemModal editItem={item} onClose={() => setShowEditModal(false)} />
       )}
     </>
   );
