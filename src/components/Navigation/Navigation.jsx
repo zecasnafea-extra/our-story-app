@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Sparkles, Gift, Calendar, Tv } from 'lucide-react';
+import { Heart, Sparkles, Gift, Calendar, Tv, Moon } from 'lucide-react';
 
 const Navigation = ({ activeTab, setActiveTab }) => {
   const navItems = [
@@ -8,6 +8,7 @@ const Navigation = ({ activeTab, setActiveTab }) => {
     { id: 'wishes', icon: Gift, label: 'Wishes' },
     { id: 'dates', icon: Calendar, label: 'Dates' },
     { id: 'watch-play', icon: Tv, label: 'Watch' },
+    { id: 'ramadan', icon: Moon, label: 'Ramadan' },  // ← ADDED THIS
   ];
 
   return (
