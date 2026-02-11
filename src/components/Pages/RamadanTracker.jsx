@@ -38,6 +38,7 @@ const RamadanTracker = () => {
         onPeriod: false,
         periodStartDate: null,
         periodEndDate: null,
+        periodQuranPages: 0, // Total Quran pages read during period
         createdAt: serverTimestamp()
       });
     }
@@ -45,7 +46,7 @@ const RamadanTracker = () => {
 
   // Calculate missed fasting days during period
   const calculateMissedFasting = (tracker) => {
-    if (!tracker?.onPeriod || !tracker?.periodStartDate || !tracker?.periodEndDate) return 0;
+    if (!tracker?.periodStartDate || !tracker?.periodEndDate) return 0;
     
     const start = new Date(tracker.periodStartDate);
     const end = new Date(tracker.periodEndDate);
@@ -84,6 +85,11 @@ const RamadanTracker = () => {
     await updateDocument(tracker.id, { quran: { ...tracker.quran, [prayer]: parseInt(pages) || 0 } });
   };
 
+  const updatePeriodQuran = async (pages, tracker) => {
+    if (!tracker) return;
+    await updateDocument(tracker.id, { periodQuranPages: parseInt(pages) || 0 });
+  };
+
   const toggleTask = async (taskName, tracker, isEditable) => {
     if (!tracker || !isEditable) return;
     
@@ -113,7 +119,8 @@ const RamadanTracker = () => {
       periodStartDate: newPeriodState ? todayDate : tracker.periodStartDate,
       periodEndDate: newPeriodState ? null : todayDate,
       fasting: false, // Disable fasting when toggling period
-      nightPrayer: false // Disable night prayer when toggling period
+      nightPrayer: false, // Disable night prayer when toggling period
+      periodQuranPages: newPeriodState ? 0 : tracker.periodQuranPages // Reset when starting new period
     });
   };
 
@@ -228,27 +235,57 @@ const RamadanTracker = () => {
                             Period {tracker?.onPeriod ? '(Active)' : '(Not Active)'}
                           </span>
                         </div>
-                        
-                        {tracker?.onPeriod && tracker?.periodStartDate && (
-                          <div className="ml-9 mt-3 space-y-2">
+                      </div>
+                      
+                      {/* Period History Card - Always visible when there's period data */}
+                      {tracker?.periodStartDate && (
+                        <div className="mt-3 rounded-lg p-4 border-2"
+                          style={{ 
+                            background: tracker?.onPeriod 
+                              ? 'linear-gradient(135deg, rgba(107,45,45,0.15), rgba(139,69,69,0.15))' 
+                              : 'linear-gradient(135deg, rgba(92,58,33,0.15), rgba(143,123,94,0.15))',
+                            borderColor: tracker?.onPeriod ? 'rgba(168,85,85,0.4)' : 'rgba(200,155,60,0.4)',
+                            boxShadow: tracker?.onPeriod 
+                              ? '0 4px 15px rgba(168,85,85,0.15)' 
+                              : '0 4px 15px rgba(200,155,60,0.15)'
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <Calendar size={18} style={{ color: tracker?.onPeriod ? '#A85555' : '#C89B3C' }} />
+                            <span className="font-semibold text-sm" style={{ color: '#E8E8E8' }}>
+                              {tracker?.onPeriod ? 'Current Period' : 'Last Period'}
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-2">
                             <div className="text-xs" style={{ color: '#A8A8A8' }}>
                               <span style={{ color: '#E8E8E8' }}>Started:</span> {new Date(tracker.periodStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
+                            
                             {tracker.periodEndDate && (
                               <>
                                 <div className="text-xs" style={{ color: '#A8A8A8' }}>
                                   <span style={{ color: '#E8E8E8' }}>Ended:</span> {new Date(tracker.periodEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </div>
                                 <div className="text-xs font-semibold" style={{ color: '#C89B3C' }}>
-                                  Missed {calculateMissedFasting(tracker)} fasting day{calculateMissedFasting(tracker) !== 1 ? 's' : ''}
+                                  Duration: {calculateMissedFasting(tracker)} day{calculateMissedFasting(tracker) !== 1 ? 's' : ''}
+                                </div>
+                                <div className="text-xs" style={{ color: '#A8A8A8' }}>
+                                  <span style={{ color: '#E8E8E8' }}>Missed fasting:</span> {calculateMissedFasting(tracker)} day{calculateMissedFasting(tracker) !== 1 ? 's' : ''}
                                 </div>
                               </>
                             )}
+                            
+                            {tracker?.onPeriod && !tracker?.periodEndDate && (
+                              <div className="text-xs italic" style={{ color: '#A8A8A8' }}>
+                                Ongoing...
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       
-                      {/* Period Notice */}
+                      {/* Period Active Notice */}
                       {isPeriodActive && (
                         <div className="mt-2 rounded-lg p-3 border" 
                           style={{ background: 'rgba(168,85,85,0.1)', borderColor: 'rgba(168,85,85,0.3)' }}>
@@ -257,6 +294,36 @@ const RamadanTracker = () => {
                           </p>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Period Quran Tracker - Only show when period is active */}
+                  {isPeriodActive && (
+                    <div className="rounded-lg p-4 mb-3 border-2"
+                      style={{ 
+                        background: 'linear-gradient(135deg, rgba(92,58,33,0.2), rgba(143,123,94,0.2))',
+                        borderColor: 'rgba(200,155,60,0.5)',
+                        boxShadow: '0 4px 15px rgba(200,155,60,0.15)'
+                      }}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <BookOpen size={20} style={{ color: '#C89B3C' }} />
+                        <span className="font-semibold" style={{ color: '#E8E8E8' }}>Today's Quran Reading</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl font-bold" style={{ color: '#C89B3C' }}>
+                          {tracker?.periodQuranPages || 0}
+                        </span>
+                        <span className="text-sm" style={{ color: '#A8A8A8' }}>pages read today</span>
+                        {isEditable && (
+                          <input
+                            type="number" min="0"
+                            value={tracker?.periodQuranPages || 0}
+                            onChange={(e) => updatePeriodQuran(e.target.value, tracker)}
+                            className={`ml-auto w-24 px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 text-center font-semibold shadow-inner ${inputStyle}`}
+                            placeholder="0"
+                          />
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -284,20 +351,17 @@ const RamadanTracker = () => {
                     </div>
                   )}
 
-                  {/* Prayers */}
-                  {prayers.map((prayer) => {
+                  {/* Prayers - Hidden during period */}
+                  {!isPeriodActive && prayers.map((prayer) => {
                     const isCompleted = tracker?.prayers?.[prayer];
-                    const isPrayerDisabled = isPeriodActive; // Disable if period is active
                     
                     return (
                       <div key={prayer}>
                         <div
                           className={`flex items-center gap-3 p-3 rounded-lg transition-all border-2 ${
                             isCompleted ? completedRow : uncompletedRow
-                          } ${isEditable && !isPrayerDisabled ? 'hover:border-[#C89B3C]/60 cursor-pointer' : ''} ${
-                            isPrayerDisabled ? 'opacity-50' : ''
-                          }`}
-                          onClick={() => !isPrayerDisabled && togglePrayer(prayer, tracker, isEditable)}
+                          } ${isEditable ? 'hover:border-[#C89B3C]/60 cursor-pointer' : ''}`}
+                          onClick={() => togglePrayer(prayer, tracker, isEditable)}
                         >
                           <div className="flex-shrink-0">
                             {isCompleted
@@ -307,9 +371,7 @@ const RamadanTracker = () => {
                           <span className={`flex-1 font-medium text-sm ${isCompleted ? 'line-through opacity-75' : ''}`}
                             style={{ color: isCompleted ? '#C89B3C' : '#E8E8E8' }}>
                             {prayerLabels[prayer]}
-                            {isPrayerDisabled && <span className="text-xs ml-2" style={{ color: '#A85555' }}>(Period)</span>}
                           </span>
-                          {/* Quran input always enabled */}
                           {isEditable ? (
                             <input
                               type="number" min="0" max="10"
