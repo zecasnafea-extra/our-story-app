@@ -8,36 +8,43 @@ import Timeline from './components/Pages/Timeline.jsx';
 import WishJar from './components/Pages/WishJar';
 import DatePlanner from './components/Pages/DatePlanner';
 import WatchPlayList from './components/Pages/WatchPlayList';
-import RamadanTracker from './components/Pages/RamadanTracker';  // ← ADD THIS
+import RamadanTracker from './components/Pages/RamadanTracker';
 
 const AppContent = () => {
   const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
-  
+
   if (!currentUser) {
     return <Auth />;
   }
-  
+
   return (
-    <div className="min-h-screen pb-20">
-      <header className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-6 shadow-lg sticky top-0 z-10">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            ❤️ Our Story
+    <div className="min-h-screen pb-20" style={{ background: '#0B0B0C' }}>
+      <header
+        className="text-white p-5 sticky top-0 z-10"
+        style={{
+          background: 'linear-gradient(135deg, #1A1A1C 0%, #2A2010 50%, #1A1A1C 100%)',
+          borderBottom: '1px solid rgba(200, 155, 60, 0.25)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5), 0 1px 0 rgba(200,155,60,0.15)'
+        }}
+      >
+        <div className="flex items-center justify-between max-w-4xl mx-auto">
+          <h1 className="text-2xl font-semibold flex items-center gap-2" style={{ color: '#C89B3C' }}>
+            🌙 Our Story
           </h1>
           <NotificationBell />
         </div>
       </header>
-      
+
       <main className="max-w-4xl mx-auto">
-        {activeTab === 'home' && <Home setActiveTab={setActiveTab} />}
-        {activeTab === 'timeline' && <Timeline />}
-        {activeTab === 'wishes' && <WishJar />}
-        {activeTab === 'dates' && <DatePlanner />}
+        {activeTab === 'home'       && <Home setActiveTab={setActiveTab} />}
+        {activeTab === 'timeline'   && <Timeline />}
+        {activeTab === 'wishes'     && <WishJar />}
+        {activeTab === 'dates'      && <DatePlanner />}
         {activeTab === 'watch-play' && <WatchPlayList />}
-        {activeTab === 'ramadan' && <RamadanTracker />}  {/* ← ADD THIS */}
+        {activeTab === 'ramadan'    && <RamadanTracker />}
       </main>
-      
+
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
