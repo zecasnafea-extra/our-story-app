@@ -70,10 +70,8 @@ const RamadanTracker = () => {
   const togglePrayer = async (prayer, tracker, isEditable) => {
     if (!tracker || !isEditable) return;
     
-    // Check if this is Rania's tracker and she's on period
     const trackerUser = tracker.user;
     if (trackerUser === 'rania' && tracker.onPeriod) {
-      // Don't allow prayer toggle during period
       return;
     }
     
@@ -93,10 +91,8 @@ const RamadanTracker = () => {
   const toggleTask = async (taskName, tracker, isEditable) => {
     if (!tracker || !isEditable) return;
     
-    // Check if this is Rania's tracker and she's on period
     const trackerUser = tracker.user;
     if (trackerUser === 'rania' && tracker.onPeriod) {
-      // Only block fasting and night prayer during period
       if (taskName === 'fasting' || taskName === 'nightPrayer') {
         return;
       }
@@ -118,9 +114,9 @@ const RamadanTracker = () => {
       onPeriod: newPeriodState,
       periodStartDate: newPeriodState ? todayDate : tracker.periodStartDate,
       periodEndDate: newPeriodState ? null : todayDate,
-      fasting: false, // Disable fasting when toggling period
-      nightPrayer: false, // Disable night prayer when toggling period
-      periodQuranPages: newPeriodState ? 0 : tracker.periodQuranPages // Reset when starting new period
+      fasting: false,
+      nightPrayer: false,
+      periodQuranPages: newPeriodState ? 0 : tracker.periodQuranPages
     });
   };
 
@@ -141,8 +137,17 @@ const RamadanTracker = () => {
             <Moon style={{ color: '#C89B3C' }} size={32} />
             Ramadan Tracker
           </h2>
-          <p className="text-sm mt-1" style={{ color: '#A8A8A8' }}>
-            {ramadanDay ? `Day ${ramadanDay} of 30 • ` : ''}
+          <p className="text-sm mt-1 flex items-center gap-2" style={{ color: '#A8A8A8' }}>
+            {/* Green dot if Ramadan started, red if not yet */}
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+              style={{
+                background: ramadanDay ? '#4ADE80' : '#EF4444',
+                boxShadow: ramadanDay ? '0 0 6px rgba(74,222,128,0.6)' : '0 0 6px rgba(239,68,68,0.6)'
+              }}
+              title={ramadanDay ? 'Ramadan tracking active' : 'Ramadan not started yet'}
+            />
+            {ramadanDay ? `Day ${ramadanDay} of 30 • ` : 'Starts Feb 19 • '}
             {myStats.prayers + partnerStats.prayers} prayers completed today
           </p>
         </div>
@@ -195,12 +200,10 @@ const RamadanTracker = () => {
 
         {/* Dual Tracker Panels */}
         <div className="grid lg:grid-cols-2 gap-6">
-          {/* His Tracker & Her Tracker */}
           {[
             { title: 'His Tracker',  isEditable: isZeyad,  tracker: isZeyad ? myTracker : partnerTracker,  headerGrad: 'from-[#5C3A21] to-[#8F7B5E]', showPeriod: false },
             { title: 'Her Tracker',  isEditable: !isZeyad, tracker: !isZeyad ? myTracker : partnerTracker, headerGrad: 'from-[#6B5D3F] to-[#9D7C5A]', showPeriod: true },
           ].map(({ title, isEditable, tracker, headerGrad, showPeriod }) => {
-            // Check if tracker belongs to Rania and she's on period
             const isPeriodActive = showPeriod && tracker?.onPeriod;
             
             return (
@@ -237,7 +240,6 @@ const RamadanTracker = () => {
                         </div>
                       </div>
                       
-                      {/* Period History Card - Always visible when there's period data */}
                       {tracker?.periodStartDate && (
                         <div className="mt-3 rounded-lg p-4 border-2"
                           style={{ 
@@ -285,7 +287,6 @@ const RamadanTracker = () => {
                         </div>
                       )}
                       
-                      {/* Period Active Notice */}
                       {isPeriodActive && (
                         <div className="mt-2 rounded-lg p-3 border" 
                           style={{ background: 'rgba(168,85,85,0.1)', borderColor: 'rgba(168,85,85,0.3)' }}>
@@ -297,7 +298,6 @@ const RamadanTracker = () => {
                     </div>
                   )}
 
-                  {/* Period Quran Tracker - Only show when period is active */}
                   {isPeriodActive && (
                     <div className="rounded-lg p-4 mb-3 border-2"
                       style={{ 
@@ -327,7 +327,6 @@ const RamadanTracker = () => {
                     </div>
                   )}
 
-                  {/* Debt Tracker */}
                   {tracker?.debtPages > 0 && (
                     <div className="rounded-lg p-3 mb-3 border-2"
                       style={{ background: 'rgba(92,58,33,0.15)', borderColor: 'rgba(200,155,60,0.3)', boxShadow: '0 4px 10px rgba(200,155,60,0.08)' }}>
@@ -351,7 +350,6 @@ const RamadanTracker = () => {
                     </div>
                   )}
 
-                  {/* Prayers - Hidden during period */}
                   {!isPeriodActive && prayers.map((prayer) => {
                     const isCompleted = tracker?.prayers?.[prayer];
                     
@@ -391,7 +389,6 @@ const RamadanTracker = () => {
                     );
                   })}
 
-                  {/* Other Tasks */}
                   {[
                     { key: 'fasting',           label: 'Fasting' },
                     { key: 'nightPrayer',       label: 'Night Prayer' },
@@ -399,7 +396,6 @@ const RamadanTracker = () => {
                     { key: 'eveningRemembrance', label: 'Evening Remembrance' }
                   ].map((task) => {
                     const isCompleted = tracker?.[task.key];
-                    // Only disable fasting and night prayer during period
                     const isTaskDisabled = isPeriodActive && (task.key === 'fasting' || task.key === 'nightPrayer');
                     
                     return (
