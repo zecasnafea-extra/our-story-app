@@ -7,7 +7,13 @@ import { serverTimestamp } from 'firebase/firestore';
 const RamadanTracker = () => {
   const { currentUser } = useAuth();
   const { documents: trackers, updateDocument, addDocument } = useFirestore('ramadanTracker');
-  const [todayDate] = useState(new Date().toISOString().split('T')[0]);
+  const [todayDate] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
 
   const isZeyad = currentUser?.email?.toLowerCase().includes('zeyad');
   const currentUserName = isZeyad ? 'zeyad' : 'rania';
@@ -16,10 +22,10 @@ const RamadanTracker = () => {
   const myTracker = trackers.find(t => t.user === currentUserName && t.date === todayDate);
   const partnerTracker = trackers.find(t => t.user === partnerName && t.date === todayDate);
 
-  // Calculate Ramadan day number (starting from 19/2/2026)
-  const ramadanStartDate = new Date('2026-02-19');
-  const today = new Date(todayDate);
-  const daysDiff = Math.floor((today - ramadanStartDate) / (1000 * 60 * 60 * 24)) + 1;
+  const ramadanStartDate = new Date(2026, 1, 19);
+  const today = new Date();
+  const diffTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()) - ramadanStartDate;
+  const daysDiff = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
   const ramadanDay = daysDiff > 0 && daysDiff <= 30 ? daysDiff : null;
 
   useEffect(() => {
