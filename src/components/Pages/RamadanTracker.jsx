@@ -108,16 +108,19 @@ const RamadanTracker = () => {
     const newPeriodState = !tracker.onPeriod;
 
     if (newPeriodState) {
-      // Starting a new period — open a new periodHistory doc
-      await addPeriodHistory({
-        user: 'rania',
-        startDate: todayDate,
-        endDate: null,
-        missedDays: 0,
-        createdAt: serverTimestamp()
-      });
+      // Only create a new period doc if there's no already-open one
+      const alreadyOpen = periodHistory.find(p => p.user === 'rania' && !p.endDate);
+      if (!alreadyOpen) {
+        await addPeriodHistory({
+          user: 'rania',
+          startDate: todayDate,
+          endDate: null,
+          missedDays: 0,
+          createdAt: serverTimestamp()
+        });
+      }
     } else {
-      // Ending the period — close the open periodHistory doc and calculate missed days
+      // Close the open period and calculate actual calendar days
       const openPeriod = periodHistory
         .filter(p => p.user === 'rania' && !p.endDate)
         .sort((a, b) => (b.startDate > a.startDate ? 1 : -1))[0];
@@ -143,13 +146,24 @@ const RamadanTracker = () => {
     });
   };
 
-  // Total missed fasting days across ALL periods this Ramadan
-  const totalMissedFastingDays = periodHistory
-    .filter(p => p.user === 'rania' && p.endDate)
+  const deletePeriod = async (periodId) => {
+    await updatePeriodHistory(periodId, { _deleted: true });
+  };
+
+  const updatePeriodDays = async (periodId, days) => {
+    await updatePeriodHistory(periodId, { missedDays: parseInt(days) || 0 });
+  };
+
+  // Filter out soft-deleted periods
+  const activePeriods = periodHistory.filter(p => p.user === 'rania' && !p._deleted);
+
+  // Total missed fasting days across ALL completed periods this Ramadan
+  const totalMissedFastingDays = activePeriods
+    .filter(p => p.endDate)
     .reduce((sum, p) => sum + (p.missedDays || 0), 0);
 
   // Active period (if any) — days missed so far even before it ends
-  const activePeriod = periodHistory.find(p => p.user === 'rania' && !p.endDate);
+  const activePeriod = activePeriods.find(p => !p.endDate);
   const activePeriodDaysSoFar = activePeriod
     ? Math.floor((new Date(todayDate) - new Date(activePeriod.startDate)) / (1000 * 60 * 60 * 24)) + 1
     : 0;
@@ -277,7 +291,7 @@ const RamadanTracker = () => {
                       </div>
                       
                       {/* Period History — shows ALL periods logged this Ramadan */}
-                      {periodHistory.filter(p => p.user === 'rania').length > 0 && (
+                      {activePeriods.length > 0 && (
                         <div className="mt-3 rounded-lg p-4 border-2"
                           style={{
                             background: 'linear-gradient(135deg, rgba(92,58,33,0.15), rgba(143,123,94,0.15))',
@@ -300,30 +314,61 @@ const RamadanTracker = () => {
                           </div>
 
                           <div className="space-y-2">
-                            {periodHistory
-                              .filter(p => p.user === 'rania')
+                            {activePeriods
                               .sort((a, b) => (a.startDate > b.startDate ? 1 : -1))
                               .map((period, idx) => {
                                 const isActive = !period.endDate;
                                 const days = isActive ? activePeriodDaysSoFar : period.missedDays;
                                 return (
                                   <div key={period.id || idx}
-                                    className="flex items-center justify-between rounded-lg px-3 py-2"
+                                    className="rounded-lg px-3 py-2"
                                     style={{
                                       background: isActive ? 'rgba(168,85,85,0.12)' : 'rgba(200,155,60,0.08)',
                                       border: `1px solid ${isActive ? 'rgba(168,85,85,0.3)' : 'rgba(200,155,60,0.2)'}`
                                     }}>
-                                    <div>
-                                      <div className="text-xs font-semibold" style={{ color: isActive ? '#A85555' : '#C89B3C' }}>
-                                        Period {idx + 1} {isActive && <span className="italic font-normal">(ongoing)</span>}
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <div className="text-xs font-semibold" style={{ color: isActive ? '#A85555' : '#C89B3C' }}>
+                                          Period {idx + 1} {isActive && <span className="italic font-normal">(ongoing)</span>}
+                                        </div>
+                                        <div className="text-xs mt-0.5" style={{ color: '#A8A8A8' }}>
+                                          {new Date(period.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                          {period.endDate && ` → ${new Date(period.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                                          {isActive && ' → ongoing'}
+                                        </div>
                                       </div>
-                                      <div className="text-xs mt-0.5" style={{ color: '#A8A8A8' }}>
-                                        {new Date(period.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                        {period.endDate && ` → ${new Date(period.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+
+                                      <div className="flex items-center gap-2">
+                                        {/* Editable days — only for completed periods and only if Rania */}
+                                        {!isActive && isEditable ? (
+                                          <div className="flex items-center gap-1">
+                                            <input
+                                              type="number" min="1" max="15"
+                                              value={period.missedDays || 0}
+                                              onChange={(e) => updatePeriodDays(period.id, e.target.value)}
+                                              className="w-14 px-2 py-1 text-xs border-2 rounded-lg focus:outline-none text-center font-bold"
+                                              style={{ background: '#0B0B0C', borderColor: 'rgba(200,155,60,0.4)', color: '#E8E8E8' }}
+                                            />
+                                            <span className="text-xs" style={{ color: '#A8A8A8' }}>days</span>
+                                          </div>
+                                        ) : (
+                                          <div className="text-sm font-bold" style={{ color: isActive ? '#A85555' : '#E8E8E8' }}>
+                                            {days} day{days !== 1 ? 's' : ''}
+                                          </div>
+                                        )}
+
+                                        {/* Delete button — only Rania can delete */}
+                                        {isEditable && !isActive && (
+                                          <button
+                                            onClick={() => deletePeriod(period.id)}
+                                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all hover:scale-110"
+                                            style={{ background: 'rgba(168,85,85,0.2)', color: '#A85555', border: '1px solid rgba(168,85,85,0.4)' }}
+                                            title="Remove this period entry"
+                                          >
+                                            ✕
+                                          </button>
+                                        )}
                                       </div>
-                                    </div>
-                                    <div className="text-sm font-bold" style={{ color: isActive ? '#A85555' : '#E8E8E8' }}>
-                                      {days} day{days !== 1 ? 's' : ''}
                                     </div>
                                   </div>
                                 );
