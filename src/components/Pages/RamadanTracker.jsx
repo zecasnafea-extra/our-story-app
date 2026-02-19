@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Moon, BookOpen, Heart, Flame, CheckCircle2, Circle, Info, Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFirestore } from '../../hooks/useFirestore';
@@ -6,9 +6,9 @@ import { serverTimestamp } from 'firebase/firestore';
 
 const RamadanTracker = () => {
   const { currentUser } = useAuth();
-  const { documents: trackers, updateDocument, addDocument } = useFirestore('ramadanTracker');
-  // Separate collection: one doc per period, so multiple periods in Ramadan are all recorded
+  const { documents: trackers, loading: trackersLoading, updateDocument, addDocument } = useFirestore('ramadanTracker');
   const { documents: periodHistory, addDocument: addPeriodHistory, updateDocument: updatePeriodHistory } = useFirestore('ramadanPeriodHistory');
+
   const [todayDate] = useState(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -30,9 +30,13 @@ const RamadanTracker = () => {
   const daysDiff = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
   const ramadanDay = daysDiff > 0 && daysDiff <= 30 ? daysDiff : null;
 
+  // Prevents React StrictMode (and any other double-fire) from creating two blank docs
+  const isCreatingDoc = useRef(false);
+
   useEffect(() => {
-    if (!myTracker && currentUser) {
-      addDocument({
+    if (trackersLoading || !currentUser || myTracker || isCreatingDoc.current) return;
+    isCreatingDoc.current = true;
+    addDocument({
         user: currentUserName,
         date: todayDate,
         prayers: { fajr: false, dhuhr: false, asr: false, maghrib: false, isha: false },
@@ -42,15 +46,16 @@ const RamadanTracker = () => {
         morningRemembrance: false,
         eveningRemembrance: false,
         debtPages: 0,
-        // Period tracking (for Rania only)
         onPeriod: false,
         periodStartDate: null,
         periodEndDate: null,
-        periodQuranPages: 0, // Total Quran pages read during period
+        periodQuranPages: 0,
         createdAt: serverTimestamp()
+      }).finally(() => {
+        // Reset only if Firestore hasn't returned the doc yet (edge case safety)
+        if (!myTracker) isCreatingDoc.current = false;
       });
-    }
-  }, [myTracker, currentUser, currentUserName, todayDate, addDocument]);
+  }, [trackersLoading, myTracker, currentUser, currentUserName, todayDate, addDocument]);
 
   const calculateStats = (tracker) => {
     if (!tracker) return { prayers: 0, quranPages: 0, fasting: false };
