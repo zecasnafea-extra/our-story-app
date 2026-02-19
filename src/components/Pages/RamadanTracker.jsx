@@ -7,6 +7,8 @@ import { serverTimestamp } from 'firebase/firestore';
 const RamadanTracker = () => {
   const { currentUser } = useAuth();
   const { documents: trackers, updateDocument, addDocument } = useFirestore('ramadanTracker');
+  // Separate collection: one doc per period, so multiple periods in Ramadan are all recorded
+  const { documents: periodHistory, addDocument: addPeriodHistory, updateDocument: updatePeriodHistory } = useFirestore('ramadanPeriodHistory');
   const [todayDate] = useState(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -49,17 +51,6 @@ const RamadanTracker = () => {
       });
     }
   }, [myTracker, currentUser, currentUserName, todayDate, addDocument]);
-
-  // Calculate missed fasting days during period
-  const calculateMissedFasting = (tracker) => {
-    if (!tracker?.periodStartDate || !tracker?.periodEndDate) return 0;
-    
-    const start = new Date(tracker.periodStartDate);
-    const end = new Date(tracker.periodEndDate);
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
-  };
 
   const calculateStats = (tracker) => {
     if (!tracker) return { prayers: 0, quranPages: 0, fasting: false };
@@ -115,8 +106,34 @@ const RamadanTracker = () => {
   const togglePeriod = async (tracker) => {
     if (!tracker) return;
     const newPeriodState = !tracker.onPeriod;
-    
-    await updateDocument(tracker.id, { 
+
+    if (newPeriodState) {
+      // Starting a new period — open a new periodHistory doc
+      await addPeriodHistory({
+        user: 'rania',
+        startDate: todayDate,
+        endDate: null,
+        missedDays: 0,
+        createdAt: serverTimestamp()
+      });
+    } else {
+      // Ending the period — close the open periodHistory doc and calculate missed days
+      const openPeriod = periodHistory
+        .filter(p => p.user === 'rania' && !p.endDate)
+        .sort((a, b) => (b.startDate > a.startDate ? 1 : -1))[0];
+
+      if (openPeriod) {
+        const start = new Date(openPeriod.startDate);
+        const end = new Date(todayDate);
+        const missed = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+        await updatePeriodHistory(openPeriod.id, {
+          endDate: todayDate,
+          missedDays: missed
+        });
+      }
+    }
+
+    await updateDocument(tracker.id, {
       onPeriod: newPeriodState,
       periodStartDate: newPeriodState ? todayDate : tracker.periodStartDate,
       periodEndDate: newPeriodState ? null : todayDate,
@@ -125,6 +142,19 @@ const RamadanTracker = () => {
       periodQuranPages: newPeriodState ? 0 : tracker.periodQuranPages
     });
   };
+
+  // Total missed fasting days across ALL periods this Ramadan
+  const totalMissedFastingDays = periodHistory
+    .filter(p => p.user === 'rania' && p.endDate)
+    .reduce((sum, p) => sum + (p.missedDays || 0), 0);
+
+  // Active period (if any) — days missed so far even before it ends
+  const activePeriod = periodHistory.find(p => p.user === 'rania' && !p.endDate);
+  const activePeriodDaysSoFar = activePeriod
+    ? Math.floor((new Date(todayDate) - new Date(activePeriod.startDate)) / (1000 * 60 * 60 * 24)) + 1
+    : 0;
+
+  const grandTotalMissed = totalMissedFastingDays + activePeriodDaysSoFar;
 
   const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
   const prayerLabels = { fajr: 'Fajr', dhuhr: 'Dhuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' };
@@ -246,50 +276,68 @@ const RamadanTracker = () => {
                         </div>
                       </div>
                       
-                      {tracker?.periodStartDate && (
+                      {/* Period History — shows ALL periods logged this Ramadan */}
+                      {periodHistory.filter(p => p.user === 'rania').length > 0 && (
                         <div className="mt-3 rounded-lg p-4 border-2"
-                          style={{ 
-                            background: tracker?.onPeriod 
-                              ? 'linear-gradient(135deg, rgba(107,45,45,0.15), rgba(139,69,69,0.15))' 
-                              : 'linear-gradient(135deg, rgba(92,58,33,0.15), rgba(143,123,94,0.15))',
-                            borderColor: tracker?.onPeriod ? 'rgba(168,85,85,0.4)' : 'rgba(200,155,60,0.4)',
-                            boxShadow: tracker?.onPeriod 
-                              ? '0 4px 15px rgba(168,85,85,0.15)' 
-                              : '0 4px 15px rgba(200,155,60,0.15)'
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(92,58,33,0.15), rgba(143,123,94,0.15))',
+                            borderColor: 'rgba(200,155,60,0.4)',
+                            boxShadow: '0 4px 15px rgba(200,155,60,0.15)'
                           }}
                         >
-                          <div className="flex items-center gap-2 mb-3">
-                            <Calendar size={18} style={{ color: tracker?.onPeriod ? '#A85555' : '#C89B3C' }} />
-                            <span className="font-semibold text-sm" style={{ color: '#E8E8E8' }}>
-                              {tracker?.onPeriod ? 'Current Period' : 'Last Period'}
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="text-xs" style={{ color: '#A8A8A8' }}>
-                              <span style={{ color: '#E8E8E8' }}>Started:</span> {new Date(tracker.periodStartDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={18} style={{ color: '#C89B3C' }} />
+                              <span className="font-semibold text-sm" style={{ color: '#E8E8E8' }}>Period History</span>
                             </div>
-                            
-                            {tracker.periodEndDate && (
-                              <>
-                                <div className="text-xs" style={{ color: '#A8A8A8' }}>
-                                  <span style={{ color: '#E8E8E8' }}>Ended:</span> {new Date(tracker.periodEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                </div>
-                                <div className="text-xs font-semibold" style={{ color: '#C89B3C' }}>
-                                  Duration: {calculateMissedFasting(tracker)} day{calculateMissedFasting(tracker) !== 1 ? 's' : ''}
-                                </div>
-                                <div className="text-xs" style={{ color: '#A8A8A8' }}>
-                                  <span style={{ color: '#E8E8E8' }}>Missed fasting:</span> {calculateMissedFasting(tracker)} day{calculateMissedFasting(tracker) !== 1 ? 's' : ''}
-                                </div>
-                              </>
-                            )}
-                            
-                            {tracker?.onPeriod && !tracker?.periodEndDate && (
-                              <div className="text-xs italic" style={{ color: '#A8A8A8' }}>
-                                Ongoing...
-                              </div>
-                            )}
+                            {/* Grand total badge */}
+                            <div className="rounded-full px-3 py-1"
+                              style={{ background: 'rgba(168,85,85,0.2)', border: '1px solid rgba(168,85,85,0.4)' }}>
+                              <span className="text-xs font-bold" style={{ color: '#A85555' }}>
+                                {grandTotalMissed} day{grandTotalMissed !== 1 ? 's' : ''} missed total
+                              </span>
+                            </div>
                           </div>
+
+                          <div className="space-y-2">
+                            {periodHistory
+                              .filter(p => p.user === 'rania')
+                              .sort((a, b) => (a.startDate > b.startDate ? 1 : -1))
+                              .map((period, idx) => {
+                                const isActive = !period.endDate;
+                                const days = isActive ? activePeriodDaysSoFar : period.missedDays;
+                                return (
+                                  <div key={period.id || idx}
+                                    className="flex items-center justify-between rounded-lg px-3 py-2"
+                                    style={{
+                                      background: isActive ? 'rgba(168,85,85,0.12)' : 'rgba(200,155,60,0.08)',
+                                      border: `1px solid ${isActive ? 'rgba(168,85,85,0.3)' : 'rgba(200,155,60,0.2)'}`
+                                    }}>
+                                    <div>
+                                      <div className="text-xs font-semibold" style={{ color: isActive ? '#A85555' : '#C89B3C' }}>
+                                        Period {idx + 1} {isActive && <span className="italic font-normal">(ongoing)</span>}
+                                      </div>
+                                      <div className="text-xs mt-0.5" style={{ color: '#A8A8A8' }}>
+                                        {new Date(period.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        {period.endDate && ` → ${new Date(period.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                                      </div>
+                                    </div>
+                                    <div className="text-sm font-bold" style={{ color: isActive ? '#A85555' : '#E8E8E8' }}>
+                                      {days} day{days !== 1 ? 's' : ''}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+
+                          {/* To-make-up reminder */}
+                          {grandTotalMissed > 0 && (
+                            <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(200,155,60,0.2)' }}>
+                              <p className="text-xs" style={{ color: '#A8A8A8' }}>
+                                📋 <span style={{ color: '#C89B3C' }}>Qadaa reminder:</span> {grandTotalMissed} fasting day{grandTotalMissed !== 1 ? 's' : ''} to make up after Ramadan
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
                       
