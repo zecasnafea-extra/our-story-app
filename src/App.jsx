@@ -9,6 +9,7 @@ import WishJar from './components/Pages/WishJar';
 import DatePlanner from './components/Pages/DatePlanner';
 import WatchPlayList from './components/Pages/WatchPlayList';
 import RamadanTracker from './components/Pages/RamadanTracker';
+import CycleTab from './components/Pages/CycleTab';
 
 const AppContent = () => {
   const { currentUser } = useAuth();
@@ -43,6 +44,7 @@ const AppContent = () => {
         {activeTab === 'dates'      && <DatePlanner />}
         {activeTab === 'watch-play' && <WatchPlayList />}
         {activeTab === 'ramadan'    && <RamadanTracker />}
+        {activeTab === 'cycle'      && <CycleTab />}
       </main>
 
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
