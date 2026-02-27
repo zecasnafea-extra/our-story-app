@@ -53,7 +53,7 @@ const PHASES = [
     bg: 'rgba(200,155,60,0.12)',
     icon: '🌕',
     energy: 5,
-    moods: ['Confident', 'Flirty', 'Outgoing', 'Energetic', 'Attractive'],
+    moods: ['Confident', 'Flirty', 'Outgoing', 'Energetic', 'Attractive', 'Clingy'],
     moodSummary: 'Confident & magnetic',
     moodDesc:
       "Peak phase. She feels her absolute best — confident, glowing, and magnetic. She'll be more flirtatious, outgoing, and expressive. Celebrate her, show up for her, and tell her she looks amazing.",
@@ -142,8 +142,9 @@ const CycleTab = () => {
   const phase            = getPhaseForDay(selectedDay);
   const currentPhase     = getPhaseForDay(currentDay);
   const daysIntoPhase    = selectedDay - phase.days[0] + 1;
-  const daysLeftInPhase  = phase.days[phase.days.length - 1] - selectedDay;
   const nextPhase        = PHASES[(PHASES.indexOf(phase) + 1) % PHASES.length];
+  // Days until the next phase begins (always at least 1)
+  const daysUntilNext    = phase.days[phase.days.length - 1] - selectedDay + 1;
 
   const isZeyad = currentUser?.email?.toLowerCase().includes('zeyad');
 
@@ -531,10 +532,10 @@ const CycleTab = () => {
             }}
           >
             <div className="text-2xl font-bold leading-none" style={{ color: nextPhase.color }}>
-              {daysLeftInPhase}
+              {daysUntilNext}
             </div>
             <div className="text-[10px] mt-1" style={{ color: '#A8A8A8' }}>
-              {daysLeftInPhase === 1 ? 'day left' : 'days left'}
+              {daysUntilNext === 1 ? 'day left' : 'days left'}
             </div>
           </div>
         </div>
